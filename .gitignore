@@ -1,0 +1,12 @@
+externals/
+/threadx/
+/build/
+tm_basic_processing
+tm_cooperative_scheduling
+tm_preemptive_scheduling
+tm_interrupt_processing
+tm_interrupt_preemption_processing
+tm_message_processing
+tm_synchronization_processing
+tm_memory_allocation
+!ports/threadx/

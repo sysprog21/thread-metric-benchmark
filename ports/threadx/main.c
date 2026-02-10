@@ -1,0 +1,28 @@
+/*
+ * ThreadX entry point for Thread-Metric benchmarks.
+ *
+ * Every test defines tm_main(), so this single shim works for all tests.
+ * main() starts the ThreadX kernel, which calls tx_application_define(),
+ * which calls tm_main() to initialize the test and create threads.
+ */
+
+#include "tx_api.h"
+#include "tm_api.h"
+#include <stdio.h>
+
+void tm_main(void);
+
+int main(void)
+{
+    setvbuf(stdout, NULL, _IONBF, 0);
+    printf("Thread-Metric: reporting interval = %d s "
+           "(POSIX timer overhead may double wall-clock time)\n",
+           TM_TEST_DURATION);
+    tx_kernel_enter();
+}
+
+void tx_application_define(void *first_unused_memory)
+{
+    (void) first_unused_memory;
+    tm_main();
+}

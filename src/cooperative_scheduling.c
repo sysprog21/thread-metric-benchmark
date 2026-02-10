@@ -219,11 +219,11 @@ unsigned long   average;
         average =  total/5;
 		
 		/* WCC - integrity check */
-		printf("tm_cooperative_thread_0_counter: %d\n", tm_cooperative_thread_0_counter);
-		printf("tm_cooperative_thread_1_counter: %d\n", tm_cooperative_thread_1_counter);
-		printf("tm_cooperative_thread_2_counter: %d\n", tm_cooperative_thread_2_counter);
-		printf("tm_cooperative_thread_3_counter: %d\n", tm_cooperative_thread_3_counter);
-		printf("tm_cooperative_thread_4_counter: %d\n", tm_cooperative_thread_4_counter);
+		printf("tm_cooperative_thread_0_counter: %lu\n", tm_cooperative_thread_0_counter);
+		printf("tm_cooperative_thread_1_counter: %lu\n", tm_cooperative_thread_1_counter);
+		printf("tm_cooperative_thread_2_counter: %lu\n", tm_cooperative_thread_2_counter);
+		printf("tm_cooperative_thread_3_counter: %lu\n", tm_cooperative_thread_3_counter);
+		printf("tm_cooperative_thread_4_counter: %lu\n", tm_cooperative_thread_4_counter);
 
         /* See if there are any errors.  */
         if ((tm_cooperative_thread_0_counter < (average - 1)) || 

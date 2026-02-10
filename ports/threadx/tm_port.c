@@ -67,7 +67,15 @@
 
 /* Define the default ThreadX queue size.  */
 
-#define TM_THREADX_QUEUE_SIZE           200
+#define TM_THREADX_QUEUE_SIZE           400
+
+
+/* Queue message size in ULONG words.  The tm_api.h interface uses
+   unsigned long for message buffers, which is 8 bytes on LP64 but
+   only 4 bytes on ILP32.  Scale accordingly so the queue slots
+   match the actual data width the tests send/receive.  */
+
+#define TM_THREADX_QUEUE_MSG_WORDS      (4 * sizeof(unsigned long) / sizeof(ULONG))
 
 
 /* Define the default ThreadX memory pool size.  */
@@ -215,9 +223,12 @@ int  tm_queue_create(int queue_id)
 UINT    status;
 
 
-    /* Create the specified queue with 16-byte messages.  */
-    status =  tx_queue_create(&tm_queue_array[queue_id], "Thread-Metric test", TX_4_ULONG, 
-                              &tm_queue_memory_area[queue_id*TM_THREADX_QUEUE_SIZE], TM_THREADX_QUEUE_SIZE);
+    /* Create the specified queue.  Message size is computed from the
+       actual width of unsigned long so LP64 and ILP32 both work.  */
+    status =  tx_queue_create(&tm_queue_array[queue_id], "Thread-Metric test",
+                              TM_THREADX_QUEUE_MSG_WORDS,
+                              &tm_queue_memory_area[queue_id*TM_THREADX_QUEUE_SIZE],
+                              TM_THREADX_QUEUE_SIZE);
 
     /* Determine if the queue create was successful.  */
     if (status == TX_SUCCESS)
@@ -227,15 +238,16 @@ UINT    status;
 }
 
 
-/* This function sends a 16-byte message to the specified queue.  If successful, 
-   the function should return TM_SUCCESS. Otherwise, TM_ERROR should be returned.  */
+/* This function sends a 4-unsigned-long message to the specified queue.  If
+   successful, the function should return TM_SUCCESS. Otherwise, TM_ERROR
+   should be returned.  */
 int  tm_queue_send(int queue_id, unsigned long *message_ptr)
 {
 
 UINT    status;
 
 
-    /* Send the 16-byte message to the specified queue.  */
+    /* Send the message to the specified queue.  */
     status =  tx_queue_send(&tm_queue_array[queue_id], message_ptr, TX_NO_WAIT);
 
     /* Determine if the queue send was successful.  */
@@ -246,15 +258,16 @@ UINT    status;
 }
 
 
-/* This function receives a 16-byte message from the specified queue.  If successful, 
-   the function should return TM_SUCCESS. Otherwise, TM_ERROR should be returned.  */
+/* This function receives a 4-unsigned-long message from the specified queue.  If
+   successful, the function should return TM_SUCCESS. Otherwise, TM_ERROR
+   should be returned.  */
 int  tm_queue_receive(int queue_id, unsigned long *message_ptr)
 {
 
 UINT    status;
 
 
-    /* Receive a 16-byte message from the specified queue.  */
+    /* Receive the message from the specified queue.  */
     status =  tx_queue_receive(&tm_queue_array[queue_id], message_ptr, TX_NO_WAIT);
 
     /* Determine if the queue receive was successful.  */

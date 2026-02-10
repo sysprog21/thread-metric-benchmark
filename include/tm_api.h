@@ -47,7 +47,7 @@
 #ifndef  TM_API_H
 #define  TM_API_H
 
-#include "tm_porting_layer.h"
+#include "tm_port.h"
 
 /* Determine if a C++ compiler is being used.  If so, ensure that standard
    C is used to process the API information.  */
