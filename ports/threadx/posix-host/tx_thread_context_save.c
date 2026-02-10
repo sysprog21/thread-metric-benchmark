@@ -9,15 +9,14 @@
 #include "tx_thread.h"
 #include "tx_timer.h"
 
-VOID   _tx_thread_context_save(VOID)
+VOID _tx_thread_context_save(VOID)
 {
     tx_posix_mutex_lock(_tx_posix_mutex);
 
-    if ((_tx_thread_current_ptr) && (_tx_thread_system_state == 0))
-    {
+    if ((_tx_thread_current_ptr) && (_tx_thread_system_state == 0)) {
         _tx_posix_thread_suspend(
-            _tx_thread_current_ptr -> tx_thread_posix_thread_id);
-        _tx_thread_current_ptr -> tx_thread_posix_suspension_type = 1;
+            _tx_thread_current_ptr->tx_thread_posix_thread_id);
+        _tx_thread_current_ptr->tx_thread_posix_suspension_type = 1;
     }
 
     _tx_thread_system_state++;

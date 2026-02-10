@@ -6,18 +6,19 @@
  * which calls tm_main() to initialize the test and create threads.
  */
 
-#include "tx_api.h"
-#include "tm_api.h"
 #include <stdio.h>
+#include "tm_api.h"
+#include "tx_api.h"
 
 void tm_main(void);
 
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Thread-Metric: reporting interval = %d s "
-           "(POSIX timer overhead may double wall-clock time)\n",
-           TM_TEST_DURATION);
+    printf(
+        "Thread-Metric: reporting interval = %d s "
+        "(POSIX timer overhead may double wall-clock time)\n",
+        TM_TEST_DURATION);
     tx_kernel_enter();
 }
 

@@ -11,42 +11,45 @@
 
 #define TX_SOURCE_CODE
 
-#include "tx_api.h"
-#include <stdio.h>
-#include <signal.h>
-#include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <unistd.h>
+#include "tx_api.h"
 
 /* ------------------------------------------------------------------ */
 /*  Global objects                                                     */
 /* ------------------------------------------------------------------ */
 
-pthread_mutex_t     _tx_posix_mutex;
-__thread int        _tx_posix_mutex_lock_count = 0;
-tx_posix_sem_t      _tx_posix_semaphore;
-tx_posix_sem_t      _tx_posix_semaphore_no_idle;
-ULONG               _tx_posix_global_int_disabled_flag;
-struct timespec     _tx_posix_time_stamp;
-__thread int        _tx_posix_threadx_thread = 0;
+pthread_mutex_t _tx_posix_mutex;
+__thread int _tx_posix_mutex_lock_count = 0;
+tx_posix_sem_t _tx_posix_semaphore;
+tx_posix_sem_t _tx_posix_semaphore_no_idle;
+ULONG _tx_posix_global_int_disabled_flag;
+struct timespec _tx_posix_time_stamp;
+__thread int _tx_posix_threadx_thread = 0;
 
 /* Signals used to suspend / resume pthreads.  */
 #define SUSPEND_SIG SIGUSR1
-#define RESUME_SIG  SIGUSR2
+#define RESUME_SIG SIGUSR2
 
-static sigset_t         _tx_posix_thread_wait_mask;
-static __thread int     _tx_posix_thread_suspended;
-static int              _tx_posix_thread_timer_pipe[2];
-static int              _tx_posix_thread_other_pipe[2];
+static sigset_t _tx_posix_thread_wait_mask;
+static __thread int _tx_posix_thread_suspended;
+static int _tx_posix_thread_timer_pipe[2];
+static int _tx_posix_thread_other_pipe[2];
 
 /* Timer thread.  */
-pthread_t               _tx_posix_timer_id;
-tx_posix_sem_t          _tx_posix_timer_semaphore;
-tx_posix_sem_t          _tx_posix_isr_semaphore;
-static void            *_tx_posix_timer_interrupt(void *p);
+pthread_t _tx_posix_timer_id;
+tx_posix_sem_t _tx_posix_timer_semaphore;
+tx_posix_sem_t _tx_posix_isr_semaphore;
+static void *_tx_posix_timer_interrupt(void *p);
 
 /* Signal handlers.  */
-static void _tx_posix_thread_resume_handler(int sig)  { (void) sig; }
+static void _tx_posix_thread_resume_handler(int sig)
+{
+    (void) sig;
+}
 
 static void _tx_posix_thread_suspend_handler(int sig)
 {
@@ -62,8 +65,8 @@ static void _tx_posix_thread_suspend_handler(int sig)
 
     /* Pick the ack pipe for this thread's role.  */
     fd = pthread_equal(pthread_self(), _tx_posix_timer_id)
-       ? _tx_posix_thread_timer_pipe[1]
-       : _tx_posix_thread_other_pipe[1];
+             ? _tx_posix_thread_timer_pipe[1]
+             : _tx_posix_thread_other_pipe[1];
 
     /* write() is async-signal-safe.  The write end is O_NONBLOCK, so
        this cannot block even if the pipe buffer is full (which would
@@ -76,18 +79,18 @@ static void _tx_posix_thread_suspend_handler(int sig)
 }
 
 /* Forward declarations expected by ThreadX core.  */
-extern void     _tx_timer_interrupt(void);
-extern VOID     _tx_thread_context_save(VOID);
-extern VOID     _tx_thread_context_restore(VOID);
-extern VOID    *_tx_initialize_unused_memory;
+extern void _tx_timer_interrupt(void);
+extern VOID _tx_thread_context_save(VOID);
+extern VOID _tx_thread_context_restore(VOID);
+extern VOID *_tx_initialize_unused_memory;
 
 /* ------------------------------------------------------------------ */
 /*  _tx_initialize_low_level                                           */
 /* ------------------------------------------------------------------ */
 
-VOID   _tx_initialize_low_level(VOID)
+VOID _tx_initialize_low_level(VOID)
 {
-    struct sched_param  sp;
+    struct sched_param sp;
     pthread_mutexattr_t attr;
 
     _tx_initialize_unused_memory = malloc(TX_POSIX_MEMORY_SIZE);
@@ -119,11 +122,11 @@ VOID   _tx_initialize_low_level(VOID)
     tx_posix_sem_init(&_tx_posix_timer_semaphore, 0);
     tx_posix_sem_init(&_tx_posix_isr_semaphore, 0);
 
-    if (pthread_create(&_tx_posix_timer_id, NULL,
-                       _tx_posix_timer_interrupt, NULL))
-    {
+    if (pthread_create(&_tx_posix_timer_id, NULL, _tx_posix_timer_interrupt,
+                       NULL)) {
         printf("ThreadX POSIX error creating timer thread!\n");
-        while (1) {}
+        while (1) {
+        }
     }
 
 #ifdef __linux__
@@ -136,7 +139,7 @@ VOID   _tx_initialize_low_level(VOID)
 /*  _tx_initialize_start_interrupts                                    */
 /* ------------------------------------------------------------------ */
 
-void    _tx_initialize_start_interrupts(void)
+void _tx_initialize_start_interrupts(void)
 {
     tx_posix_sem_post_sched(&_tx_posix_timer_semaphore);
 }
@@ -156,9 +159,8 @@ static void *_tx_posix_timer_interrupt(void *p)
     /* Wait for the kernel to start.  */
     tx_posix_sem_wait(&_tx_posix_timer_semaphore);
 
-    while (1)
-    {
-        ts.tv_sec  = 0;
+    while (1) {
+        ts.tv_sec = 0;
         ts.tv_nsec = nsec;
         nanosleep(&ts, NULL);
 
@@ -183,7 +185,7 @@ static void *_tx_posix_timer_interrupt(void *p)
 /*  Thread suspend / resume (POSIX signals -- works on macOS & Linux)  */
 /* ------------------------------------------------------------------ */
 
-void    _tx_posix_thread_suspend(pthread_t thread_id)
+void _tx_posix_thread_suspend(pthread_t thread_id)
 {
     unsigned char byte;
     int fd;
@@ -195,24 +197,24 @@ void    _tx_posix_thread_suspend(pthread_t thread_id)
     /* Block until the signal handler writes an ack byte.
        Retry on EINTR -- signals can interrupt read().  */
     fd = pthread_equal(thread_id, _tx_posix_timer_id)
-       ? _tx_posix_thread_timer_pipe[0]
-       : _tx_posix_thread_other_pipe[0];
+             ? _tx_posix_thread_timer_pipe[0]
+             : _tx_posix_thread_other_pipe[0];
 
     while (read(fd, &byte, 1) < 0 && errno == EINTR)
         ;
 }
 
-void    _tx_posix_thread_resume(pthread_t thread_id)
+void _tx_posix_thread_resume(pthread_t thread_id)
 {
     tx_posix_mutex_lock(_tx_posix_mutex);
     pthread_kill(thread_id, RESUME_SIG);
     tx_posix_mutex_unlock(_tx_posix_mutex);
 }
 
-void    _tx_posix_thread_init(void)
+void _tx_posix_thread_init(void)
 {
     struct sigaction sa;
-    sigset_t         block_set;
+    sigset_t block_set;
 
     pipe(_tx_posix_thread_timer_pipe);
     pipe(_tx_posix_thread_other_pipe);
@@ -226,7 +228,7 @@ void    _tx_posix_thread_init(void)
     sigdelset(&_tx_posix_thread_wait_mask, RESUME_SIG);
 
     sigfillset(&sa.sa_mask);
-    sa.sa_flags   = 0;
+    sa.sa_flags = 0;
     sa.sa_handler = _tx_posix_thread_resume_handler;
     sigaction(RESUME_SIG, &sa, NULL);
 

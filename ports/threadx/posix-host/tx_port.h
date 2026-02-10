@@ -29,35 +29,35 @@
 /*  Standard includes                                                  */
 /* ------------------------------------------------------------------ */
 
+#include <pthread.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <pthread.h>
 #include <time.h>
 
 /* ------------------------------------------------------------------ */
 /*  Basic ThreadX types                                                */
 /* ------------------------------------------------------------------ */
 
-typedef void                    VOID;
-typedef char                    CHAR;
-typedef unsigned char           UCHAR;
-typedef int                     INT;
-typedef unsigned int            UINT;
-typedef short                   SHORT;
-typedef unsigned short          USHORT;
-typedef uint64_t                ULONG64;
+typedef void VOID;
+typedef char CHAR;
+typedef unsigned char UCHAR;
+typedef int INT;
+typedef unsigned int UINT;
+typedef short SHORT;
+typedef unsigned short USHORT;
+typedef uint64_t ULONG64;
 #define ULONG64_DEFINED
 
 #if defined(__LP64__) || defined(_LP64)
-typedef int                     LONG;
-typedef unsigned int            ULONG;
+typedef int LONG;
+typedef unsigned int ULONG;
 #define ALIGN_TYPE_DEFINED
-typedef unsigned long long      ALIGN_TYPE;
-#define TX_BYTE_BLOCK_FREE      ((ALIGN_TYPE) 0xFFFFEEEEFFFFEEEE)
+typedef unsigned long long ALIGN_TYPE;
+#define TX_BYTE_BLOCK_FREE ((ALIGN_TYPE) 0xFFFFEEEEFFFFEEEE)
 #else
-typedef long                    LONG;
-typedef unsigned long           ULONG;
+typedef long LONG;
+typedef unsigned long ULONG;
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -65,11 +65,10 @@ typedef unsigned long           ULONG;
 /*  (macOS does not implement sem_init / sem_timedwait)                */
 /* ------------------------------------------------------------------ */
 
-typedef struct
-{
+typedef struct {
     pthread_mutex_t lock;
-    pthread_cond_t  cond;
-    int             count;
+    pthread_cond_t cond;
+    int count;
 } tx_posix_sem_t;
 
 static inline void tx_posix_sem_init(tx_posix_sem_t *s, int value)
@@ -100,8 +99,12 @@ static inline int tx_posix_sem_trywait(tx_posix_sem_t *s)
 {
     int ret;
     pthread_mutex_lock(&s->lock);
-    if (s->count > 0) { s->count--; ret = 0; }
-    else               { ret = -1; }
+    if (s->count > 0) {
+        s->count--;
+        ret = 0;
+    } else {
+        ret = -1;
+    }
     pthread_mutex_unlock(&s->lock);
     return ret;
 }
@@ -117,47 +120,48 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
 /* ------------------------------------------------------------------ */
 
 #ifndef TX_MAX_PRIORITIES
-#define TX_MAX_PRIORITIES                   32
+#define TX_MAX_PRIORITIES 32
 #endif
 
 #ifndef TX_MINIMUM_STACK
-#define TX_MINIMUM_STACK                    200
+#define TX_MINIMUM_STACK 200
 #endif
 
 #ifndef TX_TIMER_THREAD_STACK_SIZE
-#define TX_TIMER_THREAD_STACK_SIZE          400
+#define TX_TIMER_THREAD_STACK_SIZE 400
 #endif
 
 #ifndef TX_TIMER_THREAD_PRIORITY
-#define TX_TIMER_THREAD_PRIORITY            0
+#define TX_TIMER_THREAD_PRIORITY 0
 #endif
 
 #ifndef TX_POSIX_MEMORY_SIZE
-#define TX_POSIX_MEMORY_SIZE                64000
+#define TX_POSIX_MEMORY_SIZE 64000
 #endif
 
 /* ------------------------------------------------------------------ */
 /*  Interrupt posture constants                                        */
 /* ------------------------------------------------------------------ */
 
-#define TX_INT_DISABLE                      1
-#define TX_INT_ENABLE                       0
+#define TX_INT_DISABLE 1
+#define TX_INT_ENABLE 0
 
 /* ------------------------------------------------------------------ */
 /*  TX_MEMSET (avoids C-library dependency in kernel)                  */
 /* ------------------------------------------------------------------ */
 
 #ifndef TX_MISRA_ENABLE
-#define TX_MEMSET(a,b,c)                    {                           \
-                                            UCHAR *ptr;                 \
-                                            UCHAR value;                \
-                                            UINT  i, size;              \
-                                                ptr   = (UCHAR *)((VOID *) a); \
-                                                value = (UCHAR) b;      \
-                                                size  = (UINT) c;        \
-                                                for (i = 0; i < size; i++) \
-                                                    *ptr++ = value;      \
-                                            }
+#define TX_MEMSET(a, b, c)            \
+    {                                 \
+        UCHAR *ptr;                   \
+        UCHAR value;                  \
+        UINT i, size;                 \
+        ptr = (UCHAR *) ((VOID *) a); \
+        value = (UCHAR) b;            \
+        size = (UINT) c;              \
+        for (i = 0; i < size; i++)    \
+            *ptr++ = value;           \
+    }
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -165,20 +169,21 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
 /* ------------------------------------------------------------------ */
 
 #ifndef TX_TRACE_TIME_SOURCE
-#define TX_TRACE_TIME_SOURCE                ((ULONG) (_tx_posix_time_stamp.tv_nsec));
+#define TX_TRACE_TIME_SOURCE ((ULONG) (_tx_posix_time_stamp.tv_nsec));
 #endif
 
 #ifndef TX_TRACE_TIME_MASK
-#define TX_TRACE_TIME_MASK                  0xFFFFFFFFUL
+#define TX_TRACE_TIME_MASK 0xFFFFFFFFUL
 #endif
 
-#define TX_TRACE_PORT_EXTENSION             clock_gettime(CLOCK_REALTIME, &_tx_posix_time_stamp);
+#define TX_TRACE_PORT_EXTENSION \
+    clock_gettime(CLOCK_REALTIME, &_tx_posix_time_stamp);
 
 /* ------------------------------------------------------------------ */
 /*  Build / init options                                               */
 /* ------------------------------------------------------------------ */
 
-#define TX_PORT_SPECIFIC_BUILD_OPTIONS      0
+#define TX_PORT_SPECIFIC_BUILD_OPTIONS 0
 
 #ifdef TX_MISRA_ENABLE
 #define TX_DISABLE_INLINE
@@ -186,8 +191,9 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
 #define TX_INLINE_INITIALIZATION
 #endif
 
-void    _tx_initialize_start_interrupts(void);
-#define TX_PORT_SPECIFIC_PRE_SCHEDULER_INITIALIZATION   _tx_initialize_start_interrupts();
+void _tx_initialize_start_interrupts(void);
+#define TX_PORT_SPECIFIC_PRE_SCHEDULER_INITIALIZATION \
+    _tx_initialize_start_interrupts();
 
 #ifndef TX_MISRA_ENABLE
 #ifdef TX_ENABLE_STACK_CHECKING
@@ -199,12 +205,13 @@ void    _tx_initialize_start_interrupts(void);
 /*  Thread control-block extensions                                    */
 /* ------------------------------------------------------------------ */
 
-#define TX_THREAD_EXTENSION_0               pthread_t       tx_thread_posix_thread_id;      \
-                                            tx_posix_sem_t  tx_thread_posix_run_semaphore;   \
-                                            UINT            tx_thread_posix_suspension_type; \
-                                            UINT            tx_thread_posix_int_disabled_flag;
+#define TX_THREAD_EXTENSION_0                     \
+    pthread_t tx_thread_posix_thread_id;          \
+    tx_posix_sem_t tx_thread_posix_run_semaphore; \
+    UINT tx_thread_posix_suspension_type;         \
+    UINT tx_thread_posix_int_disabled_flag;
 
-#define TX_THREAD_EXTENSION_1               VOID       *tx_thread_extension_ptr;
+#define TX_THREAD_EXTENSION_1 VOID *tx_thread_extension_ptr;
 #define TX_THREAD_EXTENSION_2
 #define TX_THREAD_EXTENSION_3
 
@@ -249,105 +256,117 @@ void    _tx_initialize_start_interrupts(void);
 
 struct TX_THREAD_STRUCT;
 
-void _tx_thread_delete_port_completion(struct TX_THREAD_STRUCT *thread_ptr, UINT tx_saved_posture);
+void _tx_thread_delete_port_completion(struct TX_THREAD_STRUCT *thread_ptr,
+                                       UINT tx_saved_posture);
 #define TX_THREAD_DELETE_PORT_COMPLETION(thread_ptr) \
     _tx_thread_delete_port_completion(thread_ptr, tx_saved_posture);
 
-void _tx_thread_reset_port_completion(struct TX_THREAD_STRUCT *thread_ptr, UINT tx_saved_posture);
+void _tx_thread_reset_port_completion(struct TX_THREAD_STRUCT *thread_ptr,
+                                      UINT tx_saved_posture);
 #define TX_THREAD_RESET_PORT_COMPLETION(thread_ptr) \
     _tx_thread_reset_port_completion(thread_ptr, tx_saved_posture);
 
 /* 64-bit timer extension for thread timeout routing.  */
 
 #if defined(__LP64__) || defined(_LP64)
-#define TX_TIMER_INTERNAL_EXTENSION         VOID    *tx_timer_internal_extension_ptr;
+#define TX_TIMER_INTERNAL_EXTENSION VOID *tx_timer_internal_extension_ptr;
 
-#define TX_THREAD_CREATE_TIMEOUT_SETUP(t)                                               \
-    (t) -> tx_thread_timer.tx_timer_internal_timeout_function = &(_tx_thread_timeout);   \
-    (t) -> tx_thread_timer.tx_timer_internal_timeout_param    = 0;                       \
-    (t) -> tx_thread_timer.tx_timer_internal_extension_ptr    = (VOID *) (t);
+#define TX_THREAD_CREATE_TIMEOUT_SETUP(t)                     \
+    (t)->tx_thread_timer.tx_timer_internal_timeout_function = \
+        &(_tx_thread_timeout);                                \
+    (t)->tx_thread_timer.tx_timer_internal_timeout_param = 0; \
+    (t)->tx_thread_timer.tx_timer_internal_extension_ptr = (VOID *) (t);
 
-#define TX_THREAD_TIMEOUT_POINTER_SETUP(t)                                              \
-    (t) = (TX_THREAD *) _tx_timer_expired_timer_ptr -> tx_timer_internal_extension_ptr;
+#define TX_THREAD_TIMEOUT_POINTER_SETUP(t) \
+    (t) = (TX_THREAD *)                    \
+              _tx_timer_expired_timer_ptr->tx_timer_internal_extension_ptr;
 #endif
 
 /* ------------------------------------------------------------------ */
 /*  Interrupt disable / restore                                        */
 /* ------------------------------------------------------------------ */
 
-UINT   _tx_thread_interrupt_disable(void);
-VOID   _tx_thread_interrupt_restore(UINT previous_posture);
+UINT _tx_thread_interrupt_disable(void);
+VOID _tx_thread_interrupt_restore(UINT previous_posture);
 
-#define TX_INTERRUPT_SAVE_AREA              UINT    tx_saved_posture;
-#define TX_DISABLE                          tx_saved_posture = _tx_thread_interrupt_disable();
-#define TX_RESTORE                          _tx_thread_interrupt_restore(tx_saved_posture);
+#define TX_INTERRUPT_SAVE_AREA UINT tx_saved_posture;
+#define TX_DISABLE tx_saved_posture = _tx_thread_interrupt_disable();
+#define TX_RESTORE _tx_thread_interrupt_restore(tx_saved_posture);
 
 /* ------------------------------------------------------------------ */
 /*  POSIX mutex wrappers with manual recursive-lock counter            */
 /*  (replaces the glibc __data.__count peek in the Linux port)         */
 /* ------------------------------------------------------------------ */
 
-extern pthread_mutex_t  _tx_posix_mutex;
-extern __thread int     _tx_posix_mutex_lock_count;
+extern pthread_mutex_t _tx_posix_mutex;
+extern __thread int _tx_posix_mutex_lock_count;
 
-#define tx_posix_mutex_lock(p)   do { pthread_mutex_lock(&(p));   _tx_posix_mutex_lock_count++; } while(0)
-#define tx_posix_mutex_unlock(p) do { _tx_posix_mutex_lock_count--; pthread_mutex_unlock(&(p)); } while(0)
+#define tx_posix_mutex_lock(p)        \
+    do {                              \
+        pthread_mutex_lock(&(p));     \
+        _tx_posix_mutex_lock_count++; \
+    } while (0)
+#define tx_posix_mutex_unlock(p)      \
+    do {                              \
+        _tx_posix_mutex_lock_count--; \
+        pthread_mutex_unlock(&(p));   \
+    } while (0)
 
-#define tx_posix_mutex_recursive_unlock(p) \
-    {                                       \
+#define tx_posix_mutex_recursive_unlock(p)    \
+    {                                         \
         int _rc = _tx_posix_mutex_lock_count; \
-        while (_rc > 0)                     \
-        {                                   \
-            _tx_posix_mutex_lock_count--;   \
-            pthread_mutex_unlock(&(p));     \
-            _rc--;                          \
-        }                                   \
+        while (_rc > 0) {                     \
+            _tx_posix_mutex_lock_count--;     \
+            pthread_mutex_unlock(&(p));       \
+            _rc--;                            \
+        }                                     \
     }
 
 /* Semaphore post while holding the scheduler mutex (matches the Linux
    port's tx_linux_sem_post pattern).  */
-#define tx_posix_sem_post_sched(p)          tx_posix_mutex_lock(_tx_posix_mutex);    \
-                                            tx_posix_sem_post(p);                    \
-                                            tx_posix_mutex_unlock(_tx_posix_mutex)
+#define tx_posix_sem_post_sched(p)        \
+    tx_posix_mutex_lock(_tx_posix_mutex); \
+    tx_posix_sem_post(p);                 \
+    tx_posix_mutex_unlock(_tx_posix_mutex)
 
 /* ------------------------------------------------------------------ */
 /*  Per-object interrupt lockout (all map to TX_DISABLE)               */
 /* ------------------------------------------------------------------ */
 
-#define TX_BLOCK_POOL_DISABLE               TX_DISABLE
-#define TX_BYTE_POOL_DISABLE                TX_DISABLE
-#define TX_EVENT_FLAGS_GROUP_DISABLE        TX_DISABLE
-#define TX_MUTEX_DISABLE                    TX_DISABLE
-#define TX_QUEUE_DISABLE                    TX_DISABLE
-#define TX_SEMAPHORE_DISABLE                TX_DISABLE
+#define TX_BLOCK_POOL_DISABLE TX_DISABLE
+#define TX_BYTE_POOL_DISABLE TX_DISABLE
+#define TX_EVENT_FLAGS_GROUP_DISABLE TX_DISABLE
+#define TX_MUTEX_DISABLE TX_DISABLE
+#define TX_QUEUE_DISABLE TX_DISABLE
+#define TX_SEMAPHORE_DISABLE TX_DISABLE
 
 /* ------------------------------------------------------------------ */
 /*  Version string                                                     */
 /* ------------------------------------------------------------------ */
 
 #ifdef TX_THREAD_INIT
-CHAR                            _tx_version_id[] =
-                                    "Copyright (c) Microsoft Corporation * ThreadX POSIX/gcc *";
+CHAR _tx_version_id[] =
+    "Copyright (c) Microsoft Corporation * ThreadX POSIX/gcc *";
 #else
-extern  CHAR                    _tx_version_id[];
+extern CHAR _tx_version_id[];
 #endif
 
 /* ------------------------------------------------------------------ */
 /*  Port externals                                                     */
 /* ------------------------------------------------------------------ */
 
-extern tx_posix_sem_t                   _tx_posix_semaphore;
-extern tx_posix_sem_t                   _tx_posix_semaphore_no_idle;
-extern ULONG                            _tx_posix_global_int_disabled_flag;
-extern struct timespec                  _tx_posix_time_stamp;
-extern __thread int                     _tx_posix_threadx_thread;
+extern tx_posix_sem_t _tx_posix_semaphore;
+extern tx_posix_sem_t _tx_posix_semaphore_no_idle;
+extern ULONG _tx_posix_global_int_disabled_flag;
+extern struct timespec _tx_posix_time_stamp;
+extern __thread int _tx_posix_threadx_thread;
 
-void    _tx_posix_thread_suspend(pthread_t thread_id);
-void    _tx_posix_thread_resume(pthread_t thread_id);
-void    _tx_posix_thread_init(void);
+void _tx_posix_thread_suspend(pthread_t thread_id);
+void _tx_posix_thread_resume(pthread_t thread_id);
+void _tx_posix_thread_init(void);
 
-#define TX_POSIX_PRIORITY_SCHEDULE          (3)
-#define TX_POSIX_PRIORITY_ISR               (2)
-#define TX_POSIX_PRIORITY_USER_THREAD       (1)
+#define TX_POSIX_PRIORITY_SCHEDULE (3)
+#define TX_POSIX_PRIORITY_ISR (2)
+#define TX_POSIX_PRIORITY_USER_THREAD (1)
 
 #endif /* TX_PORT_H */

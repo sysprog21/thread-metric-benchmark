@@ -1,16 +1,16 @@
 /***************************************************************************
- * Copyright (c) 2024 Microsoft Corporation 
- * 
+ * Copyright (c) 2024 Microsoft Corporation
+ *
  * This program and the accompanying materials are made available under the
  * terms of the MIT License which is available at
  * https://opensource.org/licenses/MIT.
- * 
+ *
  * SPDX-License-Identifier: MIT
  **************************************************************************/
 
 /**************************************************************************/
 /**************************************************************************/
-/**                                                                       */ 
+/**                                                                       */
 /** Thread-Metric Component                                               */
 /**                                                                       */
 /**   Preemptive Scheduling Test                                          */
@@ -18,63 +18,62 @@
 /**************************************************************************/
 /**************************************************************************/
 
-/**************************************************************************/ 
-/*                                                                        */ 
-/*  FUNCTION                                               RELEASE        */ 
-/*                                                                        */ 
-/*    tm_preemptive_scheduling_test                       PORTABLE C      */ 
-/*                                                           6.1.7        */ 
-/*  AUTHOR                                                                */ 
-/*                                                                        */ 
-/*    William E. Lamie, Microsoft Corporation                             */ 
-/*                                                                        */ 
-/*  DESCRIPTION                                                           */ 
-/*                                                                        */ 
+/**************************************************************************/
+/*                                                                        */
+/*  FUNCTION                                               RELEASE        */
+/*                                                                        */
+/*    tm_preemptive_scheduling_test                       PORTABLE C      */
+/*                                                           6.1.7        */
+/*  AUTHOR                                                                */
+/*                                                                        */
+/*    William E. Lamie, Microsoft Corporation                             */
+/*                                                                        */
+/*  DESCRIPTION                                                           */
+/*                                                                        */
 /*    This file defines the preemptive scheduling test.                   */
-/*                                                                        */ 
-/*  RELEASE HISTORY                                                       */ 
-/*                                                                        */ 
-/*    DATE              NAME                      DESCRIPTION             */ 
-/*                                                                        */ 
+/*                                                                        */
+/*  RELEASE HISTORY                                                       */
+/*                                                                        */
+/*    DATE              NAME                      DESCRIPTION             */
+/*                                                                        */
 /*  10-15-2021     William E. Lamie         Initial Version 6.1.7         */
-/*                                                                        */ 
-/**************************************************************************/ 
+/*                                                                        */
+/**************************************************************************/
 #include "tm_api.h"
 
 
 /* Define the counters used in the demo application...  */
 
-unsigned long   tm_preemptive_thread_0_counter;
-unsigned long   tm_preemptive_thread_1_counter;
-unsigned long   tm_preemptive_thread_2_counter;
-unsigned long   tm_preemptive_thread_3_counter;
-unsigned long   tm_preemptive_thread_4_counter;
+unsigned long tm_preemptive_thread_0_counter;
+unsigned long tm_preemptive_thread_1_counter;
+unsigned long tm_preemptive_thread_2_counter;
+unsigned long tm_preemptive_thread_3_counter;
+unsigned long tm_preemptive_thread_4_counter;
 
 
 /* Define the test thread prototypes.  */
 
-void            tm_preemptive_thread_0_entry(void);
-void            tm_preemptive_thread_1_entry(void);
-void            tm_preemptive_thread_2_entry(void);
-void            tm_preemptive_thread_3_entry(void);
-void            tm_preemptive_thread_4_entry(void);
+void tm_preemptive_thread_0_entry(void);
+void tm_preemptive_thread_1_entry(void);
+void tm_preemptive_thread_2_entry(void);
+void tm_preemptive_thread_3_entry(void);
+void tm_preemptive_thread_4_entry(void);
 
 
 /* Define the reporting thread prototype.  */
 
-void            tm_preemptive_thread_report(void);
+void tm_preemptive_thread_report(void);
 
 
 /* Define the initialization prototype.  */
 
-void            tm_preemptive_scheduling_initialize(void);
+void tm_preemptive_scheduling_initialize(void);
 
 
 /* Define main entry point.  */
 
 void tm_main()
 {
-
     /* Initialize the test.  */
     tm_initialize(tm_preemptive_scheduling_initialize);
 }
@@ -82,9 +81,8 @@ void tm_main()
 
 /* Define the preemptive scheduling test initialization.  */
 
-void  tm_preemptive_scheduling_initialize(void)
+void tm_preemptive_scheduling_initialize(void)
 {
-
     /* Create thread 0 at priority 10.  */
     tm_thread_create(0, 10, tm_preemptive_thread_0_entry);
 
@@ -103,7 +101,7 @@ void  tm_preemptive_scheduling_initialize(void)
     /* Resume just thread 0.  */
     tm_thread_resume(0);
 
-    /* Create the reporting thread. It will preempt the other 
+    /* Create the reporting thread. It will preempt the other
        threads and print out the test results.  */
     tm_thread_create(5, 2, tm_preemptive_thread_report);
     tm_thread_resume(5);
@@ -111,12 +109,9 @@ void  tm_preemptive_scheduling_initialize(void)
 
 
 /* Define the first preemptive thread.  */
-void  tm_preemptive_thread_0_entry(void)
+void tm_preemptive_thread_0_entry(void)
 {
-
-    while(1)
-    {
-
+    while (1) {
         /* Resume thread 1.  */
         tm_thread_resume(1);
 
@@ -129,12 +124,9 @@ void  tm_preemptive_thread_0_entry(void)
 }
 
 /* Define the second preemptive thread.  */
-void  tm_preemptive_thread_1_entry(void)
+void tm_preemptive_thread_1_entry(void)
 {
-
-    while(1)
-    {
-
+    while (1) {
         /* Resume thread 2.  */
         tm_thread_resume(2);
 
@@ -150,12 +142,9 @@ void  tm_preemptive_thread_1_entry(void)
 }
 
 /* Define the third preemptive thread.  */
-void  tm_preemptive_thread_2_entry(void)
+void tm_preemptive_thread_2_entry(void)
 {
-
-    while(1)
-    {
-
+    while (1) {
         /* Resume thread 3.  */
         tm_thread_resume(3);
 
@@ -172,12 +161,9 @@ void  tm_preemptive_thread_2_entry(void)
 
 
 /* Define the fourth preemptive thread.  */
-void  tm_preemptive_thread_3_entry(void)
+void tm_preemptive_thread_3_entry(void)
 {
-
-    while(1)
-    {
-
+    while (1) {
         /* Resume thread 4.  */
         tm_thread_resume(4);
 
@@ -194,12 +180,9 @@ void  tm_preemptive_thread_3_entry(void)
 
 
 /* Define the fifth preemptive thread.  */
-void  tm_preemptive_thread_4_entry(void)
+void tm_preemptive_thread_4_entry(void)
 {
-
-    while(1)
-    {
-
+    while (1) {
         /* Increment this thread's counter.  */
         tm_preemptive_thread_4_counter++;
 
@@ -210,60 +193,62 @@ void  tm_preemptive_thread_4_entry(void)
 
 
 /* Define the preemptive test reporting thread.  */
-void  tm_preemptive_thread_report(void)
+void tm_preemptive_thread_report(void)
 {
-
-unsigned long   total;
-unsigned long   relative_time;
-unsigned long   last_total;
-unsigned long   average;
+    unsigned long total;
+    unsigned long relative_time;
+    unsigned long last_total;
+    unsigned long average;
 
 
     /* Initialize the last total.  */
-    last_total =  0;
+    last_total = 0;
 
     /* Initialize the relative time.  */
-    relative_time =  0;
+    relative_time = 0;
 
-    while(1)
-    {
-
+    while (1) {
         /* Sleep to allow the test to run.  */
         tm_thread_sleep(TM_TEST_DURATION);
 
         /* Increment the relative time.  */
-        relative_time =  relative_time + TM_TEST_DURATION;
+        relative_time = relative_time + TM_TEST_DURATION;
 
         /* Print results to the stdio window.  */
-        printf("**** Thread-Metric Preemptive Scheduling Test **** Relative Time: %lu\n", relative_time);
+        printf(
+            "**** Thread-Metric Preemptive Scheduling Test **** Relative Time: "
+            "%lu\n",
+            relative_time);
 
         /* Calculate the total of all the counters.  */
-        total =  tm_preemptive_thread_0_counter + tm_preemptive_thread_1_counter + tm_preemptive_thread_2_counter
-                    + tm_preemptive_thread_3_counter + tm_preemptive_thread_4_counter;
+        total = tm_preemptive_thread_0_counter +
+                tm_preemptive_thread_1_counter +
+                tm_preemptive_thread_2_counter +
+                tm_preemptive_thread_3_counter + tm_preemptive_thread_4_counter;
 
         /* Calculate the average of all the counters.  */
-        average =  total/5;
+        average = total / 5;
 
         /* See if there are any errors.  */
-        if ((tm_preemptive_thread_0_counter < (average - 1)) || 
+        if ((tm_preemptive_thread_0_counter < (average - 1)) ||
             (tm_preemptive_thread_0_counter > (average + 1)) ||
-            (tm_preemptive_thread_1_counter < (average - 1)) || 
+            (tm_preemptive_thread_1_counter < (average - 1)) ||
             (tm_preemptive_thread_1_counter > (average + 1)) ||
-            (tm_preemptive_thread_2_counter < (average - 1)) || 
+            (tm_preemptive_thread_2_counter < (average - 1)) ||
             (tm_preemptive_thread_2_counter > (average + 1)) ||
-            (tm_preemptive_thread_3_counter < (average - 1)) || 
+            (tm_preemptive_thread_3_counter < (average - 1)) ||
             (tm_preemptive_thread_3_counter > (average + 1)) ||
-            (tm_preemptive_thread_4_counter < (average - 1)) || 
-            (tm_preemptive_thread_4_counter > (average + 1)))
-        {
-
-            printf("ERROR: Invalid counter value(s). Preemptive counters should not be more that 1 different than the average!\n");
+            (tm_preemptive_thread_4_counter < (average - 1)) ||
+            (tm_preemptive_thread_4_counter > (average + 1))) {
+            printf(
+                "ERROR: Invalid counter value(s). Preemptive counters should "
+                "not be more that 1 different than the average!\n");
         }
 
         /* Show the time period total.  */
         printf("Time Period Total:  %lu\n\n", total - last_total);
 
         /* Save the last total.  */
-        last_total =  total;
+        last_total = total;
     }
 }
