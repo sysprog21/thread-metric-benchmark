@@ -123,7 +123,7 @@ void tm_interrupt_preemption_thread_1_entry(void)
         /* Force an interrupt. The underlying RTOS must see that the
            the interrupt handler is called from the appropriate software
            interrupt or trap. */
-        TM_CAUSE_INTERRUPT
+        tm_cause_interrupt();
 
         /* We won't get back here until the interrupt processing is complete,
            including the execution of the higher priority thread made ready

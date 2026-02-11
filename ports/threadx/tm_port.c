@@ -121,12 +121,30 @@ void (*tm_initialization_function)(void);
 VOID tm_thread_entry(ULONG thread_input);
 
 
+/* Forward declarations for ISR simulation (POSIX host). */
+#ifdef TM_ISR_VIA_THREAD
+static TX_THREAD tm_isr_thread;
+static unsigned char tm_isr_stack[TM_THREADX_THREAD_STACK_SIZE];
+static TX_SEMAPHORE tm_isr_semaphore;
+static VOID tm_isr_thread_entry(ULONG input);
+#endif
+
+
 /* This function called from main performs basic RTOS initialization,
    calls the test initialization function, and then starts the RTOS function. */
 void tm_initialize(void (*test_initialization_function)(void))
 {
     /* Save the test initialization function.  */
     tm_initialization_function = test_initialization_function;
+
+#ifdef TM_ISR_VIA_THREAD
+    /* Create the ISR simulation thread at priority 0 (highest).  It
+       blocks on a semaphore until tm_cause_interrupt() posts it.  */
+    tx_semaphore_create(&tm_isr_semaphore, "ISR trigger", 0);
+    tx_thread_create(&tm_isr_thread, "ISR", tm_isr_thread_entry, 0,
+                     tm_isr_stack, sizeof(tm_isr_stack), 0, 0, TX_NO_TIME_SLICE,
+                     TX_AUTO_START);
+#endif
 
     /* Call the previously defined initialization function.  */
     (tm_initialization_function)();
@@ -407,3 +425,39 @@ VOID tm_thread_entry(ULONG thread_input)
     /* Call the entry function.   */
     (entry_function)();
 }
+
+
+/* -- ISR simulation for POSIX host ----------------------------------------
+ *
+ * When TM_ISR_VIA_THREAD is defined (via -D in the Makefile for posix-host),
+ * interrupts are simulated with a priority-0 thread woken by semaphore.
+ * tx_semaphore_put() from the test thread triggers immediate preemption
+ * to the ISR thread; after the handler returns, the ISR thread suspends
+ * and the caller resumes -- identical to a synchronous hardware trap.
+ *
+ * Both handlers have weak defaults here.  The strong definition from
+ * whichever interrupt test is linked overrides the no-op.
+ * ----------------------------------------------------------------------- */
+
+#ifdef TM_ISR_VIA_THREAD
+
+__attribute__((weak)) void tm_interrupt_handler(void) {}
+__attribute__((weak)) void tm_interrupt_preemption_handler(void) {}
+
+static VOID tm_isr_thread_entry(ULONG input)
+{
+    (void) input;
+
+    while (1) {
+        tx_semaphore_get(&tm_isr_semaphore, TX_WAIT_FOREVER);
+        tm_interrupt_handler();
+        tm_interrupt_preemption_handler();
+    }
+}
+
+void tm_cause_interrupt(void)
+{
+    tx_semaphore_put(&tm_isr_semaphore);
+}
+
+#endif /* TM_ISR_VIA_THREAD */

@@ -92,6 +92,7 @@ int tm_semaphore_put(int semaphore_id);
 int tm_memory_pool_create(int pool_id);
 int tm_memory_pool_allocate(int pool_id, unsigned char **memory_ptr);
 int tm_memory_pool_deallocate(int pool_id, unsigned char *memory_ptr);
+void tm_cause_interrupt(void);
 
 
 /* Determine if a C++ compiler is being used.  If so, complete the standard
