@@ -44,8 +44,8 @@
 
 /* Define the counters used in the demo application...  */
 
-unsigned long tm_interrupt_thread_0_counter;
-unsigned long tm_interrupt_handler_counter;
+volatile unsigned long tm_interrupt_thread_0_counter;
+volatile unsigned long tm_interrupt_handler_counter;
 
 
 /* Define the test thread prototypes.  */

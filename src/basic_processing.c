@@ -46,7 +46,7 @@
 
 /* Define the counters used in the demo application...  */
 
-unsigned long tm_basic_processing_counter;
+volatile unsigned long tm_basic_processing_counter;
 
 
 /* Test array.  We will just do a series of calculations on the
@@ -102,6 +102,7 @@ void tm_basic_processing_initialize(void)
 void tm_basic_processing_thread_0_entry(void)
 {
     int i;
+    unsigned long counter_snapshot;
 
     /* Initialize the test array.   */
     for (i = 0; i < 1024; i++) {
@@ -110,6 +111,11 @@ void tm_basic_processing_thread_0_entry(void)
     }
 
     while (1) {
+        /* Snapshot the counter once per outer iteration so the volatile
+           qualifier does not force a memory reload on every inner-loop
+           access (which would measure memory traffic, not processing).  */
+        counter_snapshot = tm_basic_processing_counter;
+
         /* Loop through the basic processing array, add the previous
            contents with the contents of the tm_basic_processing_counter
            and xor the result with the previous value...   just to eat
@@ -117,7 +123,7 @@ void tm_basic_processing_thread_0_entry(void)
         for (i = 0; i < 1024; i++) {
             /* Update each array entry.  */
             tm_basic_processing_array[i] =
-                (tm_basic_processing_array[i] + tm_basic_processing_counter) ^
+                (tm_basic_processing_array[i] + counter_snapshot) ^
                 tm_basic_processing_array[i];
         }
 

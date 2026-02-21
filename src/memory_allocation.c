@@ -44,7 +44,7 @@
 
 /* Define the counters used in the demo application...  */
 
-unsigned long tm_memory_allocation_counter;
+volatile unsigned long tm_memory_allocation_counter;
 
 
 /* Define the test thread prototypes.  */
@@ -100,7 +100,11 @@ void tm_memory_allocation_thread_0_entry(void)
 
     while (1) {
         /* Allocate memory from pool.  */
-        tm_memory_pool_allocate(0, &memory_ptr);
+        status = tm_memory_pool_allocate(0, &memory_ptr);
+
+        /* Check for invalid allocation.  */
+        if (status != TM_SUCCESS)
+            break;
 
         /* Release the memory back to the pool.  */
         status = tm_memory_pool_deallocate(0, memory_ptr);

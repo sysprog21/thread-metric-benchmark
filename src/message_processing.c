@@ -45,7 +45,7 @@
 
 /* Define the counters used in the demo application...  */
 
-unsigned long tm_message_processing_counter;
+volatile unsigned long tm_message_processing_counter;
 unsigned long tm_message_sent[4];
 unsigned long tm_message_received[4];
 
@@ -105,10 +105,12 @@ void tm_message_processing_thread_0_entry(void)
 
     while (1) {
         /* Send a message to the queue.  */
-        tm_queue_send(0, tm_message_sent);
+        if (tm_queue_send(0, tm_message_sent) != TM_SUCCESS)
+            break;
 
         /* Receive a message from the queue.  */
-        tm_queue_receive(0, tm_message_received);
+        if (tm_queue_receive(0, tm_message_received) != TM_SUCCESS)
+            break;
 
         /* Check for invalid message.  */
         if (tm_message_received[3] != tm_message_sent[3])

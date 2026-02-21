@@ -44,11 +44,11 @@
 
 /* Define the counters used in the demo application...  */
 
-unsigned long tm_cooperative_thread_0_counter;
-unsigned long tm_cooperative_thread_1_counter;
-unsigned long tm_cooperative_thread_2_counter;
-unsigned long tm_cooperative_thread_3_counter;
-unsigned long tm_cooperative_thread_4_counter;
+volatile unsigned long tm_cooperative_thread_0_counter;
+volatile unsigned long tm_cooperative_thread_1_counter;
+volatile unsigned long tm_cooperative_thread_2_counter;
+volatile unsigned long tm_cooperative_thread_3_counter;
+volatile unsigned long tm_cooperative_thread_4_counter;
 
 
 /* Define the test thread prototypes.  */

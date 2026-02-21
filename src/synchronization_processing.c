@@ -44,7 +44,7 @@
 
 /* Define the counters used in the demo application...  */
 
-unsigned long tm_synchronization_processing_counter;
+volatile unsigned long tm_synchronization_processing_counter;
 
 
 /* Define the test thread prototypes.  */
@@ -98,7 +98,11 @@ void tm_synchronization_processing_thread_0_entry(void)
 
     while (1) {
         /* Get the semaphore.  */
-        tm_semaphore_get(0);
+        status = tm_semaphore_get(0);
+
+        /* Check for semaphore get error.  */
+        if (status != TM_SUCCESS)
+            break;
 
         /* Release the semaphore.  */
         status = tm_semaphore_put(0);

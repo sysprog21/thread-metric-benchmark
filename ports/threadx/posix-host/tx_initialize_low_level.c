@@ -94,6 +94,11 @@ VOID _tx_initialize_low_level(VOID)
     pthread_mutexattr_t attr;
 
     _tx_initialize_unused_memory = malloc(TX_POSIX_MEMORY_SIZE);
+    if (!_tx_initialize_unused_memory) {
+        printf("ThreadX POSIX error allocating memory!\n");
+        while (1)
+            ;
+    }
 
     _tx_posix_thread_init();
 
@@ -125,8 +130,8 @@ VOID _tx_initialize_low_level(VOID)
     if (pthread_create(&_tx_posix_timer_id, NULL, _tx_posix_timer_interrupt,
                        NULL)) {
         printf("ThreadX POSIX error creating timer thread!\n");
-        while (1) {
-        }
+        while (1)
+            ;
     }
 
 #ifdef __linux__
@@ -216,8 +221,11 @@ void _tx_posix_thread_init(void)
     struct sigaction sa;
     sigset_t block_set;
 
-    pipe(_tx_posix_thread_timer_pipe);
-    pipe(_tx_posix_thread_other_pipe);
+    if (pipe(_tx_posix_thread_timer_pipe) || pipe(_tx_posix_thread_other_pipe)) {
+        printf("ThreadX POSIX error creating pipes!\n");
+        while (1)
+            ;
+    }
 
     /* Make the write ends non-blocking so the signal handler can never
        stall.  The read ends stay blocking (callers retry on EINTR).  */
