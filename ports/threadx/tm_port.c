@@ -34,6 +34,7 @@
 
 /* Include necessary files. */
 
+#include <stdio.h>
 #include "tm_api.h"
 #include "tx_api.h"
 
@@ -466,3 +467,14 @@ void tm_cause_interrupt(void)
 }
 
 #endif /* TM_ISR_VIA_THREAD */
+
+
+/* Low-level character output for tm_printf().
+ * Cortex-M semihosting builds use ports/common/cortex-m/tm_putchar.c instead.
+ */
+#ifndef TM_SEMIHOSTING
+void tm_putchar(int c)
+{
+    putchar(c);
+}
+#endif

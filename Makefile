@@ -21,7 +21,8 @@ TM_TEST_DURATION ?= 30
 # cleanly via _exit() -> SYS_EXIT.
 TM_TEST_CYCLES ?= 0
 
-TM_INC    = -Iinclude
+TM_INC       = -Iinclude
+TM_COMMON_SRC = src/tm_report.c
 TM_CFLAGS = -DTM_TEST_DURATION=$(TM_TEST_DURATION)
 
 ifneq ($(TM_TEST_CYCLES),0)
@@ -59,7 +60,8 @@ else ifeq ($(TARGET),cortex-m-qemu)
   CFLAGS   += -mcpu=cortex-m3 -mthumb -mfloat-abi=soft
   LDFLAGS  += -T ports/common/cortex-m/mps2_an385.ld -nostartfiles
   CM_SRCS  += ports/common/cortex-m/startup.S \
-              ports/common/cortex-m/vector_table.c
+              ports/common/cortex-m/vector_table.c \
+              ports/common/cortex-m/tm_putchar.c
   LDFLAGS    += --specs=rdimon.specs
   TM_CFLAGS  += -DTM_SEMIHOSTING
   # Semihosting target mode.  "native" lets QEMU handle SYS_OPEN /
@@ -161,7 +163,7 @@ $(BUILD):
 
 tm_%: src/%.c $(TM_PORT_SRC) $(TM_MAIN_SRC) $(RTOS_LIB)
 	$(CC) $(CFLAGS) $(TM_CFLAGS) $(RTOS_INC) $(TM_INC) \
-	    -o $@ $< $(TM_PORT_SRC) $(TM_MAIN_SRC) $(CM_SRCS) \
+	    -o $@ $< $(TM_COMMON_SRC) $(TM_PORT_SRC) $(TM_MAIN_SRC) $(CM_SRCS) \
 	    $(RTOS_LIB) $(LDFLAGS)
 
 ifeq ($(TARGET),cortex-m-qemu)

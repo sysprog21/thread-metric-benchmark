@@ -189,7 +189,7 @@ void tm_preemptive_thread_report(void)
         relative_time = relative_time + TM_TEST_DURATION;
 
         /* Print results to the stdio window. */
-        printf(
+        tm_printf(
             "**** Thread-Metric Preemptive Scheduling Test **** Relative Time: "
             "%lu\n",
             relative_time);
@@ -214,13 +214,13 @@ void tm_preemptive_thread_report(void)
             (tm_preemptive_thread_3_counter > (average + 1)) ||
             (tm_preemptive_thread_4_counter < (average - 1)) ||
             (tm_preemptive_thread_4_counter > (average + 1))) {
-            printf(
+            tm_printf(
                 "ERROR: Invalid counter value(s). Preemptive counters should "
                 "not be more that 1 different than the average!\n");
         }
 
         /* Show the time period total. */
-        printf("Time Period Total:  %lu\n\n", total - last_total);
+        tm_printf("Time Period Total:  %lu\n\n", total - last_total);
 
         /* Save the last total. */
         last_total = total;

@@ -23,6 +23,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <semphr.h>
+#include <stdio.h>
 #include <task.h>
 #include "tm_api.h"
 
@@ -125,9 +126,7 @@ void tm_initialize(void (*test_initialization_function)(void))
     if (tm_isr_sem == NULL ||
         xTaskCreate(tm_isr_task_entry, "ISR", TM_FREERTOS_STACK_DEPTH, NULL,
                     configMAX_PRIORITIES - 1, &tm_isr_task) != pdPASS) {
-        printf("FATAL: ISR simulation setup failed\n");
-        for (;;)
-            ;
+        tm_check_fail("FATAL: ISR simulation setup failed\n");
     }
 #endif
 
@@ -323,3 +322,14 @@ int tm_memory_pool_deallocate(int pool_id, unsigned char *memory_ptr)
 
     return TM_SUCCESS;
 }
+
+
+/* Low-level character output for tm_printf().
+ * Cortex-M semihosting builds use ports/common/cortex-m/tm_putchar.c instead.
+ */
+#ifndef TM_SEMIHOSTING
+void tm_putchar(int c)
+{
+    putchar(c);
+}
+#endif

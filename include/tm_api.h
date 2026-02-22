@@ -12,10 +12,6 @@
 #ifndef TM_API_H
 #define TM_API_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include "tm_port.h"
-
 /* Determine if a C++ compiler is being used.  If so, ensure that standard
  * C is used to process the API information.
  */
@@ -49,6 +45,15 @@ extern "C" {
 #define TM_TEST_CYCLES 0
 #endif
 
+/* Report helpers and tiny printf implemented in src/tm_report.c.
+ * tm_putchar() is the only function each porting layer must supply
+ * for console output; tm_printf() calls it internally.
+ */
+void tm_report_finish(void);
+void tm_check_fail(const char *msg);
+void tm_putchar(int c);
+void tm_printf(const char *fmt, ...);
+
 /* Reporter loop helpers -- centralise the bounded-cycle logic so every
  * test file does not duplicate it.  C89 compatible.  Usage:
  *     TM_REPORT_LOOP {
@@ -64,17 +69,15 @@ extern "C" {
 
 #define TM_REPORT_FINISH                                        \
     }                                                           \
-    exit(0)
+    tm_report_finish()
 
 /* Init-time check: abort on failure so mis-configured porting layers
  * are caught immediately instead of producing silent hangs.
  */
 #define TM_CHECK(call)                                          \
     do {                                                        \
-        if ((call) != TM_SUCCESS) {                             \
-            printf("FATAL: " #call " failed\n");                \
-            exit(1);                                            \
-        }                                                       \
+        if ((call) != TM_SUCCESS)                               \
+            tm_check_fail("FATAL: " #call " failed\n");         \
     } while (0)
 
 
