@@ -39,7 +39,8 @@ TESTS = \
 
 # Interrupt tests require tm_cause_interrupt() and wired ISR handlers in the
 # porting layer.  Each supported target provides its own dispatch mechanism:
-# POSIX host uses TM_ISR_VIA_THREAD; Cortex-M uses SVC (tm_isr_dispatch.c).
+# POSIX host uses TM_ISR_VIA_THREAD; Cortex-M uses RTOS-specific dispatch
+# (ThreadX: SVC #0, FreeRTOS: NVIC IRQ 31 -- SVC is reserved by FreeRTOS).
 
 BINS = $(addprefix tm_, $(TESTS))
 
@@ -97,6 +98,45 @@ TESTS += interrupt_processing interrupt_preemption_processing
 CLONE_STAMP = $(THREADX_DIR)/.cloned
 RTOS_LIB    = $(BUILD)/libtx.a
 CLONE_URL   = https://github.com/eclipse-threadx/threadx
+
+# RTOS: FreeRTOS
+else ifeq ($(RTOS),freertos)
+FREERTOS_DIR = freertos-kernel
+TM_PORT_SRC  = ports/freertos/tm_port.c
+TM_MAIN_SRC  = ports/freertos/main.c
+RTOS_DIR     = $(FREERTOS_DIR)
+
+# Kernel sources common to all targets (no timers, no event groups).
+FREERTOS_SRCS = $(FREERTOS_DIR)/tasks.c \
+                $(FREERTOS_DIR)/queue.c \
+                $(FREERTOS_DIR)/list.c \
+                $(FREERTOS_DIR)/portable/MemMang/heap_4.c
+
+ifeq ($(TARGET),posix-host)
+  FREERTOS_PORT = $(FREERTOS_DIR)/portable/ThirdParty/GCC/Posix
+  RTOS_INC      = -I$(FREERTOS_DIR)/include \
+                  -I$(FREERTOS_PORT) \
+                  -Iports/freertos/posix-host
+  RTOS_SRCS     = $(FREERTOS_SRCS) \
+                  $(wildcard $(FREERTOS_PORT)/*.c) \
+                  $(wildcard $(FREERTOS_PORT)/utils/*.c)
+  RTOS_INC     += -I$(FREERTOS_PORT)/utils
+  TM_CFLAGS    += -DTM_ISR_VIA_THREAD
+else ifeq ($(TARGET),cortex-m-qemu)
+  FREERTOS_PORT = $(FREERTOS_DIR)/portable/GCC/ARM_CM3
+  RTOS_INC      = -I$(FREERTOS_DIR)/include \
+                  -I$(FREERTOS_PORT) \
+                  -Iports/freertos/cortex-m
+  RTOS_SRCS     = $(FREERTOS_SRCS) \
+                  $(FREERTOS_PORT)/port.c
+  CM_SRCS      += ports/freertos/cortex-m/tm_isr_dispatch.c
+endif
+
+TESTS += interrupt_processing interrupt_preemption_processing
+
+CLONE_STAMP = $(FREERTOS_DIR)/.cloned
+RTOS_LIB    = $(BUILD)/libfreertos.a
+CLONE_URL   = https://github.com/FreeRTOS/FreeRTOS-Kernel
 
 endif
 
