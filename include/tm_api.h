@@ -80,15 +80,19 @@ extern "C" {
 #endif
 
 /* Reporter loop helpers -- centralise the bounded-cycle logic so every
-   test file does not duplicate it.  Usage:
+   test file does not duplicate it.  C89 compatible.  Usage:
        TM_REPORT_LOOP {
            ... sleep, print, check counters ...
        } TM_REPORT_FINISH  */
-#define TM_REPORT_LOOP \
-    for (int _tm_cycle = 0; \
-         !TM_TEST_CYCLES || _tm_cycle < TM_TEST_CYCLES; _tm_cycle++)
+#define TM_REPORT_LOOP                                          \
+    {                                                           \
+        int _tm_cycle;                                          \
+        for (_tm_cycle = 0;                                     \
+             !TM_TEST_CYCLES || _tm_cycle < TM_TEST_CYCLES;     \
+             _tm_cycle++)
 
-#define TM_REPORT_FINISH \
+#define TM_REPORT_FINISH                                        \
+    }                                                           \
     exit(0)
 
 

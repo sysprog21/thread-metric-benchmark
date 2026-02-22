@@ -61,10 +61,12 @@ else ifeq ($(TARGET),cortex-m-qemu)
               ports/common/cortex-m/vector_table.c
   LDFLAGS    += --specs=rdimon.specs
   TM_CFLAGS  += -DTM_SEMIHOSTING
-  # target=native: QEMU handles semihosting calls natively.  Do not expose
-  # this on shared CI runners without sandboxing -- semihosting SYS_OPEN /
-  # SYS_WRITE can access the host filesystem.
-  QEMU_FLAGS  = -semihosting-config enable=on,target=native
+  # Semihosting target mode.  "native" lets QEMU handle SYS_OPEN /
+  # SYS_WRITE directly on the host filesystem -- convenient for local
+  # development but a security risk on shared CI runners.  Override
+  # with QEMU_SEMIHOSTING_TARGET=gdb for sandboxed environments.
+  QEMU_SEMIHOSTING_TARGET ?= native
+  QEMU_FLAGS  = -semihosting-config enable=on,target=$(QEMU_SEMIHOSTING_TARGET)
 endif
 
 # RTOS: ThreadX
@@ -123,8 +125,13 @@ tm_%: src/%.c $(TM_PORT_SRC) $(TM_MAIN_SRC) $(RTOS_LIB)
 	    $(RTOS_LIB) $(LDFLAGS)
 
 ifeq ($(TARGET),cortex-m-qemu)
-run: $(firstword $(BINS))
-	scripts/qemu-run.sh $< $(QEMU_FLAGS)
+# Force TM_TEST_CYCLES=1 so the test self-terminates via semihosting
+# SYS_EXIT.  The rm forces a rebuild since Make tracks source timestamps,
+# not compiler flags.  Override with: make run TM_TEST_CYCLES=0 QEMU_TIMEOUT=60
+run:
+	rm -f $(firstword $(BINS))
+	$(MAKE) TM_TEST_CYCLES=1 $(firstword $(BINS))
+	scripts/qemu-run.sh $(firstword $(BINS)) $(QEMU_FLAGS)
 endif
 
 clean:
@@ -134,15 +141,15 @@ clean:
 distclean: clean
 	rm -rf threadx freertos-kernel rt-thread
 
-# Quick smoke test: build with 3-second intervals, run each test under
-# a timeout.  Useful for verifying a new port or code change.
+# Quick smoke test: build with 3-second intervals and 1 reporting cycle,
+# run each test under a timeout.  TM_TEST_CYCLES=1 ensures tests
+# self-terminate even when timeout/gtimeout is unavailable (macOS).
 check:
 	$(MAKE) clean
-	$(MAKE) TM_TEST_DURATION=3
+	$(MAKE) TM_TEST_DURATION=3 TM_TEST_CYCLES=1
 	@TCMD=""; \
 	if command -v timeout >/dev/null 2>&1; then TCMD="timeout"; \
-	elif command -v gtimeout >/dev/null 2>&1; then TCMD="gtimeout"; \
-	else echo "Warning: timeout/gtimeout not found; tests may hang" >&2; fi; \
+	elif command -v gtimeout >/dev/null 2>&1; then TCMD="gtimeout"; fi; \
 	passed=0; failed=0; \
 	for t in $(BINS); do \
 	    printf "  %-35s" "$$t ..."; \
