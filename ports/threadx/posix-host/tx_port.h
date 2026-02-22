@@ -17,17 +17,13 @@
 #ifndef TX_PORT_H
 #define TX_PORT_H
 
-/* ------------------------------------------------------------------ */
-/*  Optional user overrides                                            */
-/* ------------------------------------------------------------------ */
+/* Optional user overrides */
 
 #ifdef TX_INCLUDE_USER_DEFINE_FILE
 #include "tx_user.h"
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Standard includes                                                  */
-/* ------------------------------------------------------------------ */
+/* Standard includes */
 
 #include <pthread.h>
 #include <stdint.h>
@@ -35,9 +31,7 @@
 #include <string.h>
 #include <time.h>
 
-/* ------------------------------------------------------------------ */
-/*  Basic ThreadX types                                                */
-/* ------------------------------------------------------------------ */
+/* Basic ThreadX types */
 
 typedef void VOID;
 typedef char CHAR;
@@ -60,10 +54,9 @@ typedef long LONG;
 typedef unsigned long ULONG;
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Portable semaphore built on pthread mutex + condvar                */
-/*  (macOS does not implement sem_init / sem_timedwait)                */
-/* ------------------------------------------------------------------ */
+/* Portable semaphore built on pthread mutex + condvar
+ * (macOS does not implement sem_init / sem_timedwait)
+ */
 
 typedef struct {
     pthread_mutex_t lock;
@@ -115,9 +108,7 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
     pthread_cond_destroy(&s->cond);
 }
 
-/* ------------------------------------------------------------------ */
-/*  Configuration knobs                                                */
-/* ------------------------------------------------------------------ */
+/* Configuration knobs */
 
 #ifndef TX_MAX_PRIORITIES
 #define TX_MAX_PRIORITIES 32
@@ -139,16 +130,12 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
 #define TX_POSIX_MEMORY_SIZE 64000
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Interrupt posture constants                                        */
-/* ------------------------------------------------------------------ */
+/* Interrupt posture constants */
 
 #define TX_INT_DISABLE 1
 #define TX_INT_ENABLE 0
 
-/* ------------------------------------------------------------------ */
-/*  TX_MEMSET (avoids C-library dependency in kernel)                  */
-/* ------------------------------------------------------------------ */
+/* TX_MEMSET (avoids C-library dependency in kernel) */
 
 #ifndef TX_MISRA_ENABLE
 #define TX_MEMSET(a, b, c)            \
@@ -164,9 +151,7 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
     }
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Trace                                                              */
-/* ------------------------------------------------------------------ */
+/* Trace */
 
 #ifndef TX_TRACE_TIME_SOURCE
 #define TX_TRACE_TIME_SOURCE ((ULONG) (_tx_posix_time_stamp.tv_nsec));
@@ -179,9 +164,7 @@ static inline void tx_posix_sem_destroy(tx_posix_sem_t *s)
 #define TX_TRACE_PORT_EXTENSION \
     clock_gettime(CLOCK_REALTIME, &_tx_posix_time_stamp);
 
-/* ------------------------------------------------------------------ */
-/*  Build / init options                                               */
-/* ------------------------------------------------------------------ */
+/* Build / init options */
 
 #define TX_PORT_SPECIFIC_BUILD_OPTIONS 0
 
@@ -201,9 +184,7 @@ void _tx_initialize_start_interrupts(void);
 #endif
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Thread control-block extensions                                    */
-/* ------------------------------------------------------------------ */
+/* Thread control-block extensions */
 
 #define TX_THREAD_EXTENSION_0                     \
     pthread_t tx_thread_posix_thread_id;          \
@@ -215,9 +196,7 @@ void _tx_initialize_start_interrupts(void);
 #define TX_THREAD_EXTENSION_2
 #define TX_THREAD_EXTENSION_3
 
-/* ------------------------------------------------------------------ */
-/*  Object-lifecycle hooks (all empty for this port)                   */
-/* ------------------------------------------------------------------ */
+/* Object-lifecycle hooks (all empty for this port) */
 
 #define TX_BLOCK_POOL_EXTENSION
 #define TX_BYTE_POOL_EXTENSION
@@ -252,7 +231,7 @@ void _tx_initialize_start_interrupts(void);
 #define TX_SEMAPHORE_DELETE_EXTENSION(semaphore_ptr)
 #define TX_TIMER_DELETE_EXTENSION(timer_ptr)
 
-/* Thread delete / reset completion (needed by tx_thread_create.c).  */
+/* Thread delete / reset completion (needed by tx_thread_create.c). */
 
 struct TX_THREAD_STRUCT;
 
@@ -266,7 +245,7 @@ void _tx_thread_reset_port_completion(struct TX_THREAD_STRUCT *thread_ptr,
 #define TX_THREAD_RESET_PORT_COMPLETION(thread_ptr) \
     _tx_thread_reset_port_completion(thread_ptr, tx_saved_posture);
 
-/* 64-bit timer extension for thread timeout routing.  */
+/* 64-bit timer extension for thread timeout routing. */
 
 #if defined(__LP64__) || defined(_LP64)
 #define TX_TIMER_INTERNAL_EXTENSION VOID *tx_timer_internal_extension_ptr;
@@ -282,9 +261,7 @@ void _tx_thread_reset_port_completion(struct TX_THREAD_STRUCT *thread_ptr,
               _tx_timer_expired_timer_ptr->tx_timer_internal_extension_ptr;
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Interrupt disable / restore                                        */
-/* ------------------------------------------------------------------ */
+/* Interrupt disable / restore */
 
 UINT _tx_thread_interrupt_disable(void);
 VOID _tx_thread_interrupt_restore(UINT previous_posture);
@@ -293,10 +270,9 @@ VOID _tx_thread_interrupt_restore(UINT previous_posture);
 #define TX_DISABLE tx_saved_posture = _tx_thread_interrupt_disable();
 #define TX_RESTORE _tx_thread_interrupt_restore(tx_saved_posture);
 
-/* ------------------------------------------------------------------ */
-/*  POSIX mutex wrappers with manual recursive-lock counter            */
-/*  (replaces the glibc __data.__count peek in the Linux port)         */
-/* ------------------------------------------------------------------ */
+/* POSIX mutex wrappers with manual recursive-lock counter
+ * (replaces the glibc __data.__count peek in the Linux port)
+ */
 
 extern pthread_mutex_t _tx_posix_mutex;
 extern __thread int _tx_posix_mutex_lock_count;
@@ -323,15 +299,14 @@ extern __thread int _tx_posix_mutex_lock_count;
     }
 
 /* Semaphore post while holding the scheduler mutex (matches the Linux
-   port's tx_linux_sem_post pattern).  */
+ * port's tx_linux_sem_post pattern).
+ */
 #define tx_posix_sem_post_sched(p)        \
     tx_posix_mutex_lock(_tx_posix_mutex); \
     tx_posix_sem_post(p);                 \
     tx_posix_mutex_unlock(_tx_posix_mutex)
 
-/* ------------------------------------------------------------------ */
-/*  Per-object interrupt lockout (all map to TX_DISABLE)               */
-/* ------------------------------------------------------------------ */
+/* Per-object interrupt lockout (all map to TX_DISABLE) */
 
 #define TX_BLOCK_POOL_DISABLE TX_DISABLE
 #define TX_BYTE_POOL_DISABLE TX_DISABLE
@@ -340,9 +315,7 @@ extern __thread int _tx_posix_mutex_lock_count;
 #define TX_QUEUE_DISABLE TX_DISABLE
 #define TX_SEMAPHORE_DISABLE TX_DISABLE
 
-/* ------------------------------------------------------------------ */
-/*  Version string                                                     */
-/* ------------------------------------------------------------------ */
+/* Version string */
 
 #ifdef TX_THREAD_INIT
 CHAR _tx_version_id[] =
@@ -351,9 +324,7 @@ CHAR _tx_version_id[] =
 extern CHAR _tx_version_id[];
 #endif
 
-/* ------------------------------------------------------------------ */
-/*  Port externals                                                     */
-/* ------------------------------------------------------------------ */
+/* Port externals */
 
 extern tx_posix_sem_t _tx_posix_semaphore;
 extern tx_posix_sem_t _tx_posix_semaphore_no_idle;

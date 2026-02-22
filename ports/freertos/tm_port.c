@@ -27,9 +27,7 @@
 #include "tm_api.h"
 
 
-/* ------------------------------------------------------------------ */
-/*  Constants                                                         */
-/* ------------------------------------------------------------------ */
+/* Constants */
 
 #define TM_FREERTOS_MAX_THREADS 10
 #define TM_FREERTOS_MAX_QUEUES 1
@@ -46,9 +44,7 @@
 #define TM_BLOCK_COUNT (TM_POOL_SIZE / TM_BLOCK_SIZE)
 
 
-/* ------------------------------------------------------------------ */
-/*  Data structures                                                   */
-/* ------------------------------------------------------------------ */
+/* Data structures */
 
 static TaskHandle_t tm_thread_array[TM_FREERTOS_MAX_THREADS];
 static QueueHandle_t tm_queue_array[TM_FREERTOS_MAX_QUEUES];
@@ -62,27 +58,25 @@ static void tm_task_trampoline(void *param)
     int id = (int) (unsigned long) param;
     tm_thread_entry_functions[id]();
     /* Benchmark threads loop forever, but guard against accidental
-       return -- FreeRTOS tasks must not fall off the end. */
+     * return -- FreeRTOS tasks must not fall off the end.
+     */
     vTaskDelete(NULL);
 }
 
 
-/* ------------------------------------------------------------------ */
-/*  O(1) fixed-block memory pool (no kernel involvement)              */
-/* ------------------------------------------------------------------ */
+/* O(1) fixed-block memory pool (no kernel involvement) */
 
 /* Pool storage -- aligned for any basic type. */
 static unsigned char tm_pool_area[TM_FREERTOS_MAX_POOLS][TM_POOL_SIZE]
     __attribute__((aligned(sizeof(void *))));
 
 /* Freelist head per pool.  Each free block stores a pointer to the
-   next free block in its first sizeof(void*) bytes. */
+ * next free block in its first sizeof(void*) bytes.
+ */
 static void *tm_pool_free[TM_FREERTOS_MAX_POOLS];
 
 
-/* ------------------------------------------------------------------ */
-/*  ISR simulation -- POSIX host                                      */
-/* ------------------------------------------------------------------ */
+/* ISR simulation -- POSIX host */
 
 #ifdef TM_ISR_VIA_THREAD
 
@@ -110,9 +104,7 @@ void tm_cause_interrupt(void)
 #endif /* TM_ISR_VIA_THREAD */
 
 
-/* ------------------------------------------------------------------ */
-/*  Cortex-M ISR dispatch (provided by tm_isr_dispatch.c)             */
-/* ------------------------------------------------------------------ */
+/* Cortex-M ISR dispatch (provided by tm_isr_dispatch.c) */
 
 #if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
 extern void tm_isr_dispatch_init(void);
@@ -120,19 +112,23 @@ extern void tm_isr_dispatch_init(void);
 #endif
 
 
-/* ------------------------------------------------------------------ */
-/*  tm_initialize                                                     */
-/* ------------------------------------------------------------------ */
+/* tm_initialize */
 
 void tm_initialize(void (*test_initialization_function)(void))
 {
 #ifdef TM_ISR_VIA_THREAD
     /* ISR simulation thread at highest FreeRTOS priority.
-       Created before the test threads so it exists when
-       tm_cause_interrupt() is called. */
+     * Created before the test threads so it exists when
+     * tm_cause_interrupt() is called.
+     */
     tm_isr_sem = xSemaphoreCreateBinary();
-    xTaskCreate(tm_isr_task_entry, "ISR", TM_FREERTOS_STACK_DEPTH, NULL,
-                configMAX_PRIORITIES - 1, &tm_isr_task);
+    if (tm_isr_sem == NULL ||
+        xTaskCreate(tm_isr_task_entry, "ISR", TM_FREERTOS_STACK_DEPTH, NULL,
+                    configMAX_PRIORITIES - 1, &tm_isr_task) != pdPASS) {
+        printf("FATAL: ISR simulation setup failed\n");
+        for (;;)
+            ;
+    }
 #endif
 
     /* Let the test create its threads. */
@@ -147,9 +143,7 @@ void tm_initialize(void (*test_initialization_function)(void))
 }
 
 
-/* ------------------------------------------------------------------ */
-/*  Thread management                                                 */
-/* ------------------------------------------------------------------ */
+/* Thread management */
 
 int tm_thread_create(int thread_id, int priority, void (*entry_function)(void))
 {
@@ -157,7 +151,8 @@ int tm_thread_create(int thread_id, int priority, void (*entry_function)(void))
     UBaseType_t freertos_prio;
 
     /* Invert priority: TM 1 (highest) -> configMAX_PRIORITIES-2,
-       TM 31 (lowest) -> 0.  Reserve configMAX_PRIORITIES-1 for ISR. */
+     * TM 31 (lowest) -> 0.  Reserve configMAX_PRIORITIES-1 for ISR.
+     */
     freertos_prio = (UBaseType_t) ((configMAX_PRIORITIES - 1) - priority);
 
     tm_thread_entry_functions[thread_id] = entry_function;
@@ -170,7 +165,8 @@ int tm_thread_create(int thread_id, int priority, void (*entry_function)(void))
         return TM_ERROR;
 
     /* Create in suspended state (matches ThreadX TX_DONT_START).
-       Safe because the scheduler has not started yet. */
+     * Safe because the scheduler has not started yet.
+     */
     vTaskSuspend(tm_thread_array[thread_id]);
 
     return TM_SUCCESS;
@@ -208,9 +204,7 @@ void tm_thread_sleep(int seconds)
 }
 
 
-/* ------------------------------------------------------------------ */
-/*  Queue management                                                  */
-/* ------------------------------------------------------------------ */
+/* Queue management */
 
 int tm_queue_create(int queue_id)
 {
@@ -242,9 +236,7 @@ int tm_queue_receive(int queue_id, unsigned long *message_ptr)
 }
 
 
-/* ------------------------------------------------------------------ */
-/*  Semaphore management                                              */
-/* ------------------------------------------------------------------ */
+/* Semaphore management */
 
 int tm_semaphore_create(int semaphore_id)
 {
@@ -286,9 +278,7 @@ int tm_semaphore_put(int semaphore_id)
 }
 
 
-/* ------------------------------------------------------------------ */
-/*  Memory pool management -- O(1) freelist                           */
-/* ------------------------------------------------------------------ */
+/* Memory pool management -- O(1) freelist */
 
 int tm_memory_pool_create(int pool_id)
 {

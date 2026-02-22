@@ -1,89 +1,60 @@
-/***************************************************************************
+/*
  * Copyright (c) 2024 Microsoft Corporation
- *
- * This program and the accompanying materials are made available under the
- * terms of the MIT License which is available at
- * https://opensource.org/licenses/MIT.
- *
  * SPDX-License-Identifier: MIT
- **************************************************************************/
+ */
 
-/**************************************************************************/
-/**************************************************************************/
-/**                                                                       */
-/** Thread-Metric Component                                               */
-/**                                                                       */
-/** Application Interface (API)                                           */
-/**                                                                       */
-/**************************************************************************/
-/**************************************************************************/
-
-
-/**************************************************************************/
-/*                                                                        */
-/*  APPLICATION INTERFACE DEFINITION                       RELEASE        */
-/*                                                                        */
-/*    tm_api.h                                            PORTABLE C      */
-/*                                                           6.1.7        */
-/*  AUTHOR                                                                */
-/*                                                                        */
-/*    William E. Lamie, Microsoft Corporation                             */
-/*                                                                        */
-/*  DESCRIPTION                                                           */
-/*                                                                        */
-/*    This file defines the basic Application Interface (API)             */
-/*    implementation source code for the Thread-Metrics performance       */
-/*    test suite. All service prototypes and data structure definitions   */
-/*    are defined in this file.                                           */
-/*                                                                        */
-/*  RELEASE HISTORY                                                       */
-/*                                                                        */
-/*    DATE              NAME                      DESCRIPTION             */
-/*                                                                        */
-/*  10-15-2021     William E. Lamie         Initial Version 6.1.7         */
-/*                                                                        */
-/**************************************************************************/
+/* Thread-Metric Component -- Application Interface (API)
+ *
+ * RTOS-neutral API for the Thread-Metric performance test suite.
+ * All service prototypes and data structure definitions are here.
+ */
 
 #ifndef TM_API_H
 #define TM_API_H
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "tm_port.h"
 
 /* Determine if a C++ compiler is being used.  If so, ensure that standard
-   C is used to process the API information.  */
+ * C is used to process the API information.
+ */
 
 #ifdef __cplusplus
 
-/* Yes, C++ compiler is present.  Use standard C.  */
+/* Yes, C++ compiler is present.  Use standard C. */
 extern "C" {
 
 #endif
 
-/* Define API constants.  */
+/* Define API constants. */
 
 #define TM_SUCCESS 0
 #define TM_ERROR 1
 
 
 /* Define the time interval in seconds. This can be changed with a -D compiler
- * option.  */
+ * option.
+ */
 
 #ifndef TM_TEST_DURATION
 #define TM_TEST_DURATION 30
 #endif
 
 /* Number of reporting cycles before the test calls exit(0).  Default 0
-   means infinite (original behavior).  Set to 1 for CI / QEMU semihosting
-   runs so the program terminates cleanly via _exit() -> SYS_EXIT.  */
+ * means infinite (original behavior).  Set to 1 for CI / QEMU semihosting
+ * runs so the program terminates cleanly via _exit() -> SYS_EXIT.
+ */
 #ifndef TM_TEST_CYCLES
 #define TM_TEST_CYCLES 0
 #endif
 
 /* Reporter loop helpers -- centralise the bounded-cycle logic so every
-   test file does not duplicate it.  C89 compatible.  Usage:
-       TM_REPORT_LOOP {
-           ... sleep, print, check counters ...
-       } TM_REPORT_FINISH  */
+ * test file does not duplicate it.  C89 compatible.  Usage:
+ *     TM_REPORT_LOOP {
+ *         ... sleep, print, check counters ...
+ *     } TM_REPORT_FINISH
+ */
 #define TM_REPORT_LOOP                                          \
     {                                                           \
         int _tm_cycle;                                          \
@@ -95,10 +66,22 @@ extern "C" {
     }                                                           \
     exit(0)
 
+/* Init-time check: abort on failure so mis-configured porting layers
+ * are caught immediately instead of producing silent hangs.
+ */
+#define TM_CHECK(call)                                          \
+    do {                                                        \
+        if ((call) != TM_SUCCESS) {                             \
+            printf("FATAL: " #call " failed\n");                \
+            exit(1);                                            \
+        }                                                       \
+    } while (0)
+
 
 /* Define RTOS Neutral APIs. RTOS vendors should fill in the guts of the
-   following API. Once this is done the Thread-Metric tests can be successfully
-   run.  */
+ * following API. Once this is done the Thread-Metric tests can be successfully
+ * run.
+ */
 
 void tm_initialize(void (*test_initialization_function)(void));
 int tm_thread_create(int thread_id, int priority, void (*entry_function)(void));
@@ -119,7 +102,8 @@ void tm_cause_interrupt(void);
 
 
 /* Determine if a C++ compiler is being used.  If so, complete the standard
-   C conditional started above.  */
+ * C conditional started above.
+ */
 #ifdef __cplusplus
 }
 #endif

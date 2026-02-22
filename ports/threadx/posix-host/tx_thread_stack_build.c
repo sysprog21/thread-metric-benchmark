@@ -26,7 +26,7 @@ VOID _tx_thread_stack_build(TX_THREAD *thread_ptr, VOID (*function_ptr)(VOID))
         }
     }
 
-    /* Best-effort priority elevation (skip on macOS where it blocks).  */
+    /* Best-effort priority elevation (skip on macOS where it blocks). */
 #ifdef __linux__
     sp.sched_priority = TX_POSIX_PRIORITY_USER_THREAD;
     pthread_setschedparam(thread_ptr->tx_thread_posix_thread_id, SCHED_FIFO,
@@ -48,7 +48,7 @@ static void *_tx_posix_thread_entry(void *ptr)
 
     _tx_posix_threadx_thread = 1;
 
-    /* Wait until the scheduler lets us run.  */
+    /* Wait until the scheduler lets us run. */
     tx_posix_sem_wait(&thread_ptr->tx_thread_posix_run_semaphore);
     tx_posix_sem_post(&_tx_posix_semaphore);
 

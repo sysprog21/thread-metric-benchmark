@@ -30,8 +30,9 @@ void PendSV_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void SysTick_Handler(void) __attribute__((weak, alias("Default_Handler")));
 
 /* External interrupt handlers (IRQ 0-31).  Weak aliases allow any RTOS
-   port or application code to override individual handlers.  FreeRTOS
-   Cortex-M port uses IRQ 31 for software-triggered interrupt dispatch. */
+ * port or application code to override individual handlers.  FreeRTOS
+ * Cortex-M port uses IRQ 31 for software-triggered interrupt dispatch.
+ */
 void IRQ0_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void IRQ1_Handler(void) __attribute__((weak, alias("Default_Handler")));
 void IRQ2_Handler(void) __attribute__((weak, alias("Default_Handler")));

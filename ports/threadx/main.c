@@ -17,6 +17,7 @@ int main(void)
     setvbuf(stdout, NULL, _IONBF, 0);
     printf("Thread-Metric: reporting interval = %d s\n", TM_TEST_DURATION);
     tx_kernel_enter();
+    return 0;
 }
 
 void tx_application_define(void *first_unused_memory)

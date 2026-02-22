@@ -76,8 +76,9 @@
 #define configLIBRARY_LOWEST_INTERRUPT_PRIORITY 7
 
 /* Maximum priority from which FreeRTOS API calls can be made.
-   Interrupts at higher priority (lower number) must not call
-   FreeRTOS API functions. */
+ * Interrupts at higher priority (lower number) must not call
+ * FreeRTOS API functions.
+ */
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY 5
 
 #define configKERNEL_INTERRUPT_PRIORITY \

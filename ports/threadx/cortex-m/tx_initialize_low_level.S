@@ -25,9 +25,7 @@
 SYSTEM_CLOCK   = 25000000
 SYSTICK_CYCLES = ((SYSTEM_CLOCK / 100) - 1)
 
-/* ------------------------------------------------------------------ */
-/*  _tx_initialize_low_level                                          */
-/* ------------------------------------------------------------------ */
+/* _tx_initialize_low_level */
     .section .text._tx_initialize_low_level
     .global  _tx_initialize_low_level
     .type    _tx_initialize_low_level, %function
@@ -81,9 +79,7 @@ _tx_initialize_low_level:
     .size _tx_initialize_low_level, . - _tx_initialize_low_level
 
 
-/* ------------------------------------------------------------------ */
-/*  SysTick_Handler -- overrides the weak alias in vector_table.c     */
-/* ------------------------------------------------------------------ */
+/* SysTick_Handler -- overrides the weak alias in vector_table.c */
     .section .text.SysTick_Handler
     .global  SysTick_Handler
     .type    SysTick_Handler, %function

@@ -14,9 +14,7 @@
     .cpu    cortex-m3
     .thumb
 
-/* ------------------------------------------------------------------ */
-/*  Reset handler                                                     */
-/* ------------------------------------------------------------------ */
+/* Reset handler */
 
     .section .text.Reset_Handler
     .global  Reset_Handler
@@ -49,10 +47,11 @@ Reset_Handler:
     bl      SystemInit
 
     /* Initialize semihosting file handles (stdout/stderr/stdin).
-       Without this call, printf() has no output under QEMU semihosting.
-       initialise_monitor_handles() is provided by librdimon
-       (--specs=rdimon.specs).  Guarded so non-semihosting builds
-       (e.g. UART retargeting with nosys.specs) skip the call. */
+     * Without this call, printf() has no output under QEMU semihosting.
+     * initialise_monitor_handles() is provided by librdimon
+     * (--specs=rdimon.specs).  Guarded so non-semihosting builds
+     * (e.g. UART retargeting with nosys.specs) skip the call.
+     */
 #ifdef TM_SEMIHOSTING
     bl      initialise_monitor_handles
 #endif
@@ -63,9 +62,7 @@ Reset_Handler:
     b       .Lhang
     .size   Reset_Handler, . - Reset_Handler
 
-/* ------------------------------------------------------------------ */
-/*  Default SystemInit -- no-op, override in board-specific code.     */
-/* ------------------------------------------------------------------ */
+/* Default SystemInit -- no-op, override in board-specific code. */
 
     .section .text.SystemInit
     .weak   SystemInit
@@ -74,10 +71,9 @@ SystemInit:
     bx      lr
     .size   SystemInit, . - SystemInit
 
-/* ------------------------------------------------------------------ */
-/*  _fini / _init stubs for newlib.                                   */
-/*  -nostartfiles skips crt0 which normally provides these.            */
-/* ------------------------------------------------------------------ */
+/* _fini / _init stubs for newlib.
+ * -nostartfiles skips crt0 which normally provides these.
+ */
 
     .section .text._init
     .global  _init

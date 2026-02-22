@@ -22,7 +22,7 @@ VOID _tx_thread_schedule(VOID)
     ts.tv_nsec = 200000;
 
     while (1) {
-        /* Wait for a runnable thread while no ISR is active.  */
+        /* Wait for a runnable thread while no ISR is active. */
         while (1) {
             tx_posix_mutex_lock(_tx_posix_mutex);
 
@@ -35,17 +35,17 @@ VOID _tx_thread_schedule(VOID)
             nanosleep(&ts, NULL);
         }
 
-        /* Schedule the next thread (mutex is held).  */
+        /* Schedule the next thread (mutex is held). */
         _tx_thread_current_ptr = _tx_thread_execute_ptr;
         _tx_thread_current_ptr->tx_thread_run_count++;
         _tx_timer_time_slice = _tx_thread_current_ptr->tx_thread_time_slice;
 
         if (_tx_thread_current_ptr->tx_thread_posix_suspension_type) {
-            /* Pseudo-interrupt suspension -- resume the pthread.  */
+            /* Pseudo-interrupt suspension -- resume the pthread. */
             _tx_posix_thread_resume(
                 _tx_thread_current_ptr->tx_thread_posix_thread_id);
         } else {
-            /* Drain and post the run semaphore.  */
+            /* Drain and post the run semaphore. */
             while (!tx_posix_sem_trywait(
                 &_tx_thread_current_ptr->tx_thread_posix_run_semaphore))
                 ;
@@ -64,14 +64,12 @@ VOID _tx_thread_schedule(VOID)
 
         tx_posix_mutex_unlock(_tx_posix_mutex);
 
-        /* Block until the thread yields back.  */
+        /* Block until the thread yields back. */
         tx_posix_sem_wait(&_tx_posix_semaphore);
     }
 }
 
-/* ------------------------------------------------------------------ */
-/*  Port-completion helpers for thread delete / reset                   */
-/* ------------------------------------------------------------------ */
+/* Port-completion helpers for thread delete / reset */
 
 void _tx_thread_delete_port_completion(TX_THREAD *thread_ptr,
                                        UINT tx_saved_posture)

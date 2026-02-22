@@ -52,7 +52,8 @@ scripts/
 ```
 
 Two layers, one boundary: tests call the API in `tm_api.h`, the porting layer
-maps those calls to real RTOS primitives. Only one test links per build.
+maps those calls to real RTOS primitives. Each binary links exactly one test
+source file.
 
 ## Supported RTOS Ports
 
@@ -61,7 +62,7 @@ maps those calls to real RTOS primitives. Only one test links per build.
 | ThreadX | yes | yes (mps2-an385) | yes |
 | FreeRTOS | yes | yes (mps2-an385) | yes |
 
-Both ports pass all 8 tests on both targets.
+Both ports have been tested with all 8 tests on both targets (`make check`).
 
 ## Porting Layer
 

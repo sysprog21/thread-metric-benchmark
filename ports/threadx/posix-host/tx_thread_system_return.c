@@ -22,7 +22,7 @@ VOID _tx_thread_system_return(VOID)
     thread_id = pthread_self();
     temp_thread_ptr = _tx_thread_current_ptr;
 
-    /* Detect terminated thread still running for cleanup.  */
+    /* Detect terminated thread still running for cleanup. */
     if ((_tx_posix_threadx_thread) &&
         ((!temp_thread_ptr) ||
          (!pthread_equal(temp_thread_ptr->tx_thread_posix_thread_id,
@@ -31,7 +31,7 @@ VOID _tx_thread_system_return(VOID)
         pthread_exit((void *) &exit_code);
     }
 
-    /* Preserve time-slice.  */
+    /* Preserve time-slice. */
     if (_tx_timer_time_slice) {
         temp_thread_ptr->tx_thread_time_slice = _tx_timer_time_slice;
         _tx_timer_time_slice = 0;
@@ -45,22 +45,22 @@ VOID _tx_thread_system_return(VOID)
 
     tx_posix_mutex_recursive_unlock(_tx_posix_mutex);
 
-    /* Drain and post the scheduler semaphore.  */
+    /* Drain and post the scheduler semaphore. */
     while (!tx_posix_sem_trywait(&_tx_posix_semaphore))
         ;
     tx_posix_sem_post_sched(&_tx_posix_semaphore);
 
-    /* If the thread self-terminated, exit the pthread.  */
+    /* If the thread self-terminated, exit the pthread. */
     if (temp_thread_state == TX_TERMINATED)
         pthread_exit((void *) &exit_code);
 
-    /* Wait until the scheduler re-selects this thread.  */
+    /* Wait until the scheduler re-selects this thread. */
     tx_posix_sem_wait(temp_run_semaphore);
     tx_posix_sem_post(&_tx_posix_semaphore);
 
     tx_posix_mutex_lock(_tx_posix_mutex);
 
-    /* Re-check for termination after wakeup.  */
+    /* Re-check for termination after wakeup. */
     temp_thread_ptr = _tx_thread_current_ptr;
     if ((_tx_posix_threadx_thread) &&
         ((!temp_thread_ptr) ||

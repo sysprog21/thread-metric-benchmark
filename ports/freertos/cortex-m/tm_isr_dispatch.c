@@ -49,9 +49,10 @@ void IRQ31_Handler(void)
 void tm_isr_dispatch_init(void)
 {
     /* Set IRQ 31 priority.  IRQ 31 is in NVIC_IPR7 byte 3
-       (IPR offset = IRQ / 4 = 7, byte = IRQ % 4 = 3).
-       Set to 0xE0 (priority 7 << 5 for 3 priority bits) --
-       lowest priority, same as PendSV. */
+     * (IPR offset = IRQ / 4 = 7, byte = IRQ % 4 = 3).
+     * Set to 0xE0 (priority 7 << 5 for 3 priority bits) --
+     * lowest priority, same as PendSV.
+     */
     NVIC_IPR7 = (NVIC_IPR7 & 0x00FFFFFFUL) | (0xE0UL << 24);
 
     /* Enable IRQ 31 in NVIC. */

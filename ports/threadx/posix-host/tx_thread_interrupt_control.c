@@ -31,7 +31,7 @@ UINT _tx_thread_interrupt_control(UINT new_posture)
     thread_id = pthread_self();
     thread_ptr = _tx_thread_current_ptr;
 
-    /* Detect terminated thread still running for cleanup.  */
+    /* Detect terminated thread still running for cleanup. */
     if ((_tx_posix_threadx_thread) &&
         ((!thread_ptr) ||
          (!pthread_equal(thread_ptr->tx_thread_posix_thread_id, thread_id)))) {
@@ -39,7 +39,7 @@ UINT _tx_thread_interrupt_control(UINT new_posture)
         pthread_exit((void *) &exit_code);
     }
 
-    /* Determine current posture from recursive lock depth.  */
+    /* Determine current posture from recursive lock depth. */
     old_posture =
         (_tx_posix_mutex_lock_count == 1) ? TX_INT_ENABLE : TX_INT_DISABLE;
 
