@@ -16,8 +16,17 @@ LDFLAGS  =
 # the actual wall-clock time (e.g. 30 -> ~60 s on macOS).
 TM_TEST_DURATION ?= 30
 
+# Number of reporting cycles before exit(0).  0 = infinite (default).
+# Set to 1 for CI / QEMU semihosting runs so the program terminates
+# cleanly via _exit() -> SYS_EXIT.
+TM_TEST_CYCLES ?= 0
+
 TM_INC    = -Iinclude
 TM_CFLAGS = -DTM_TEST_DURATION=$(TM_TEST_DURATION)
+
+ifneq ($(TM_TEST_CYCLES),0)
+  TM_CFLAGS += -DTM_TEST_CYCLES=$(TM_TEST_CYCLES)
+endif
 
 # Non-interrupt tests (build on any platform).
 TESTS = \
@@ -50,7 +59,12 @@ else ifeq ($(TARGET),cortex-m-qemu)
   LDFLAGS  += -T ports/common/cortex-m/mps2_an385.ld -nostartfiles
   CM_SRCS  += ports/common/cortex-m/startup.S \
               ports/common/cortex-m/vector_table.c
-  LDFLAGS  += --specs=rdimon.specs
+  LDFLAGS    += --specs=rdimon.specs
+  TM_CFLAGS  += -DTM_SEMIHOSTING
+  # target=native: QEMU handles semihosting calls natively.  Do not expose
+  # this on shared CI runners without sandboxing -- semihosting SYS_OPEN /
+  # SYS_WRITE can access the host filesystem.
+  QEMU_FLAGS  = -semihosting-config enable=on,target=native
 endif
 
 # RTOS: ThreadX
@@ -68,7 +82,12 @@ ifeq ($(TARGET),posix-host)
                $(wildcard $(POSIX_PORT)/tx_*.c)
   TM_CFLAGS += -DTM_ISR_VIA_THREAD
 else ifeq ($(TARGET),cortex-m-qemu)
-  CM_SRCS   += ports/threadx/cortex-m/tm_isr_dispatch.c
+  CM3_PORT   = $(THREADX_DIR)/ports/cortex_m3/gnu
+  RTOS_INC   = -I$(THREADX_DIR)/common/inc -I$(CM3_PORT)/inc
+  RTOS_SRCS  = $(wildcard $(THREADX_DIR)/common/src/*.c) \
+               $(wildcard $(CM3_PORT)/src/*.S)
+  CM_SRCS   += ports/threadx/cortex-m/tm_isr_dispatch.c \
+               ports/threadx/cortex-m/tx_initialize_low_level.S
 endif
 
 TESTS += interrupt_processing interrupt_preemption_processing
@@ -79,7 +98,7 @@ CLONE_URL   = https://github.com/eclipse-threadx/threadx
 
 endif
 
-.PHONY: all clean distclean check
+.PHONY: all clean distclean check run
 .DELETE_ON_ERROR:
 
 all: $(BINS)
@@ -103,6 +122,11 @@ tm_%: src/%.c $(TM_PORT_SRC) $(TM_MAIN_SRC) $(RTOS_LIB)
 	    -o $@ $< $(TM_PORT_SRC) $(TM_MAIN_SRC) $(CM_SRCS) \
 	    $(RTOS_LIB) $(LDFLAGS)
 
+ifeq ($(TARGET),cortex-m-qemu)
+run: $(firstword $(BINS))
+	scripts/qemu-run.sh $< $(QEMU_FLAGS)
+endif
+
 clean:
 	rm -f $(BINS)
 	rm -rf $(BUILD)
@@ -115,10 +139,18 @@ distclean: clean
 check:
 	$(MAKE) clean
 	$(MAKE) TM_TEST_DURATION=3
-	@passed=0; failed=0; \
+	@TCMD=""; \
+	if command -v timeout >/dev/null 2>&1; then TCMD="timeout"; \
+	elif command -v gtimeout >/dev/null 2>&1; then TCMD="gtimeout"; \
+	else echo "Warning: timeout/gtimeout not found; tests may hang" >&2; fi; \
+	passed=0; failed=0; \
 	for t in $(BINS); do \
 	    printf "  %-35s" "$$t ..."; \
-	    out=$$(timeout 10 ./$$t 2>&1 | grep 'Time Period Total'); \
+	    if [ -n "$$TCMD" ]; then \
+	        out=$$($$TCMD 10 ./$$t 2>&1 | grep 'Time Period Total'); \
+	    else \
+	        out=$$(./$$t 2>&1 | grep 'Time Period Total'); \
+	    fi; \
 	    if [ -n "$$out" ]; then \
 	        printf "OK\n"; passed=$$((passed + 1)); \
 	    else \

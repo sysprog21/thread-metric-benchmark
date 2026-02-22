@@ -48,6 +48,15 @@ Reset_Handler:
     /* Call SystemInit (weak default is a no-op). */
     bl      SystemInit
 
+    /* Initialize semihosting file handles (stdout/stderr/stdin).
+       Without this call, printf() has no output under QEMU semihosting.
+       initialise_monitor_handles() is provided by librdimon
+       (--specs=rdimon.specs).  Guarded so non-semihosting builds
+       (e.g. UART retargeting with nosys.specs) skip the call. */
+#ifdef TM_SEMIHOSTING
+    bl      initialise_monitor_handles
+#endif
+
     /* Branch to main.  If main() returns, spin forever. */
     bl      main
 .Lhang:
@@ -64,3 +73,22 @@ Reset_Handler:
 SystemInit:
     bx      lr
     .size   SystemInit, . - SystemInit
+
+/* ------------------------------------------------------------------ */
+/*  _fini / _init stubs for newlib.                                   */
+/*  -nostartfiles skips crt0 which normally provides these.            */
+/* ------------------------------------------------------------------ */
+
+    .section .text._init
+    .global  _init
+    .type    _init, %function
+_init:
+    bx      lr
+    .size   _init, . - _init
+
+    .section .text._fini
+    .global  _fini
+    .type    _fini, %function
+_fini:
+    bx      lr
+    .size   _fini, . - _fini

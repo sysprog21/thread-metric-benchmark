@@ -72,6 +72,25 @@ extern "C" {
 #define TM_TEST_DURATION 30
 #endif
 
+/* Number of reporting cycles before the test calls exit(0).  Default 0
+   means infinite (original behavior).  Set to 1 for CI / QEMU semihosting
+   runs so the program terminates cleanly via _exit() -> SYS_EXIT.  */
+#ifndef TM_TEST_CYCLES
+#define TM_TEST_CYCLES 0
+#endif
+
+/* Reporter loop helpers -- centralise the bounded-cycle logic so every
+   test file does not duplicate it.  Usage:
+       TM_REPORT_LOOP {
+           ... sleep, print, check counters ...
+       } TM_REPORT_FINISH  */
+#define TM_REPORT_LOOP \
+    for (int _tm_cycle = 0; \
+         !TM_TEST_CYCLES || _tm_cycle < TM_TEST_CYCLES; _tm_cycle++)
+
+#define TM_REPORT_FINISH \
+    exit(0)
+
 
 /* Define RTOS Neutral APIs. RTOS vendors should fill in the guts of the
    following API. Once this is done the Thread-Metric tests can be successfully

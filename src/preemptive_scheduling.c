@@ -207,7 +207,8 @@ void tm_preemptive_thread_report(void)
     /* Initialize the relative time.  */
     relative_time = 0;
 
-    while (1) {
+    TM_REPORT_LOOP
+    {
         /* Sleep to allow the test to run.  */
         tm_thread_sleep(TM_TEST_DURATION);
 
@@ -251,4 +252,6 @@ void tm_preemptive_thread_report(void)
         /* Save the last total.  */
         last_total = total;
     }
+
+    TM_REPORT_FINISH;
 }
