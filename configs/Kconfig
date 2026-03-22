@@ -1,0 +1,91 @@
+mainmenu "Thread-Metric Benchmark Configuration"
+
+choice
+    prompt "RTOS Kernel"
+    default RTOS_THREADX
+
+config RTOS_THREADX
+    bool "ThreadX"
+    help
+      Eclipse ThreadX (formerly Azure RTOS ThreadX).
+      Cloned from https://github.com/eclipse-threadx/threadx.
+      Full interrupt test support on all targets.
+
+config RTOS_FREERTOS
+    bool "FreeRTOS"
+    help
+      FreeRTOS kernel with POSIX simulator or Cortex-M3 port.
+      Cloned from https://github.com/FreeRTOS/FreeRTOS-Kernel.
+      Full interrupt test support on all targets.
+
+endchoice
+
+choice
+    prompt "Target Platform"
+    default TARGET_POSIX_HOST
+
+config TARGET_POSIX_HOST
+    bool "POSIX Host (Linux/macOS)"
+    help
+      Run on the host OS using POSIX threads.
+      No cross-compiler or emulator needed.
+      Primary development and CI target.
+
+config TARGET_CORTEX_M_QEMU
+    bool "Cortex-M3 QEMU (mps2-an385)"
+    help
+      Cross-compile for ARM Cortex-M3 and run under QEMU.
+      Requires arm-none-eabi-gcc and qemu-system-arm.
+      Validates real exception entry, NVIC, PendSV, SysTick.
+
+endchoice
+
+menu "Test Configuration"
+
+config TEST_DURATION
+    int "Reporting interval (seconds)"
+    default 30
+    range 1 600
+    help
+      Wall-clock seconds between benchmark reports.
+      POSIX timer overhead may roughly double the actual
+      interval on some hosts (e.g. 30 -> ~60 s on macOS).
+
+config TEST_CYCLES
+    int "Number of reporting cycles (0 = infinite)"
+    default 0
+    range 0 1000
+    help
+      Number of reports before exit(0).  0 = infinite
+      (original behavior: run until killed).
+      Set to 1 for CI / QEMU semihosting so the program
+      terminates cleanly via _exit() -> SYS_EXIT.
+
+endmenu
+
+menu "Build Options"
+
+config OPTIMIZE_SIZE
+    bool "Optimize for size (-Os)"
+    default n
+    help
+      Use -Os instead of -O2.
+
+config DEBUG_SYMBOLS
+    bool "Debug symbols (-g)"
+    default n
+
+config SANITIZERS
+    bool "Address/undefined sanitizers"
+    default n
+    depends on TARGET_POSIX_HOST
+    help
+      Enable -fsanitize=address,undefined.
+      Only available for POSIX host builds.
+
+endmenu
+
+# Sentinel: set when .config is generated so the Makefile can detect
+# whether configuration has been run.
+config CONFIGURED
+    def_bool y

@@ -73,7 +73,13 @@ set -e
 if [ $rc -eq 124 ]; then
     # timeout(1) / gtimeout returns 124 when the child is killed.
     if [ $semihosting -eq 1 ]; then
-        echo "FAIL: QEMU timed out (semihosting exit never reached)" >&2
+        echo "FAIL: QEMU timed out after ${QEMU_TIMEOUT}s (semihosting exit never reached)" >&2
+        echo "  QEMU    : $("$QEMU" --version 2>&1 | head -1)" >&2
+        echo "  ELF     : $ELF" >&2
+        echo "  flags   : $*" >&2
+        echo "  timeout : $TIMEOUT_CMD $QEMU_TIMEOUT" >&2
+        echo "  Hint: verify -semihosting-config is in flags above, TM_TEST_CYCLES=1 in binary," >&2
+        echo "        and QEMU supports ARM semihosting (qemu-system-arm >= 4.0)." >&2
         exit 1
     fi
     # UART mode: timeout is expected (tests loop forever).
