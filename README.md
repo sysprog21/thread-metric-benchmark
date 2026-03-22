@@ -23,32 +23,38 @@ repository, released under the MIT license.
 ## Architecture
 
 ```
+configs/
+  Kconfig               # Build configuration schema (RTOS, target, options)
+  *_defconfig            # Pre-made configurations for each RTOS+target
+
+mk/
+  build.mk               # Toolchain, flags, build directory, verbosity
+
 include/
-  tm_api.h              # RTOS-neutral API (14 functions + tm_cause_interrupt)
-  tm_port.h             # Platform-specific defines
+  tm_api.h               # RTOS-neutral API (14 functions + tm_cause_interrupt)
 
 src/
-  *.c                   # One test per file, each defines tm_main()
+  *.c                    # One test per file, each defines tm_main()
 
 ports/
   common/
-    cortex-m/           # Shared Cortex-M3 bootstrap for QEMU mps2-an385
-      startup.S         #   Reset handler, BSS/data init, semihosting setup
-      vector_table.c    #   Default NVIC handlers (weak aliases)
-      mps2_an385.ld     #   Linker script (4 MB FLASH + 4 MB SRAM)
-  threadx/              # ThreadX porting layer
-    tm_port.c           #   14-function API implementation
-    main.c              #   Entry point
-    posix-host/         #   POSIX simulator config (Linux/macOS)
-    cortex-m/           #   Cortex-M3 QEMU support (SVC dispatch, SysTick)
-  freertos/             # FreeRTOS porting layer
-    tm_port.c           #   14-function API implementation
-    main.c              #   Entry point
-    posix-host/         #   POSIX simulator config (FreeRTOSConfig.h)
-    cortex-m/           #   Cortex-M3 QEMU support (NVIC IRQ dispatch)
+    cortex-m/            # Shared Cortex-M3 bootstrap for QEMU mps2-an385
+      startup.S          #   Reset handler, BSS/data init, semihosting setup
+      vector_table.c     #   Default NVIC handlers (weak aliases)
+      mps2_an385.ld      #   Linker script (4 MB FLASH + 4 MB SRAM)
+  threadx/               # ThreadX porting layer
+    tm_port.c            #   14-function API implementation
+    main.c               #   Entry point
+    posix-host/          #   POSIX simulator config (Linux/macOS)
+    cortex-m/            #   Cortex-M3 QEMU support (SVC dispatch, SysTick)
+  freertos/              # FreeRTOS porting layer
+    tm_port.c            #   14-function API implementation
+    main.c               #   Entry point
+    posix-host/          #   POSIX simulator config (FreeRTOSConfig.h)
+    cortex-m/            #   Cortex-M3 QEMU support (NVIC IRQ dispatch)
 
 scripts/
-  qemu-run.sh           # QEMU runner with semihosting + timeout
+  qemu-run.sh            # QEMU runner with semihosting + timeout
 ```
 
 Two layers, one boundary: tests call the API in `tm_api.h`, the porting layer
@@ -79,31 +85,53 @@ Requirements for fair benchmarking:
 
 ## Building
 
-The build system selects an RTOS and target platform via two variables:
+The build system uses [Kconfiglib](https://github.com/sysprog21/Kconfiglib)
+for RTOS and target selection.
+Kconfiglib is downloaded automatically on first use.
 
+### Quick start
+
+Configure once, then build:
 ```shell
-make                                        # ThreadX, POSIX host (default)
-make RTOS=freertos                          # FreeRTOS, POSIX host
-make RTOS=threadx  TARGET=cortex-m-qemu     # ThreadX, QEMU Cortex-M3
-make RTOS=freertos TARGET=cortex-m-qemu     # FreeRTOS, QEMU Cortex-M3
+make defconfig          # Apply default config (ThreadX + POSIX host)
+make                    # Build all test binaries
+```
+
+Or configure and build in a single command:
+```shell
+make defconfig all
+```
+
+### Selecting an RTOS and target
+
+Named defconfig files provide pre-made configurations:
+```shell
+make threadx_posix_defconfig        # ThreadX + POSIX host
+make threadx_cortex_m_defconfig     # ThreadX + Cortex-M3 QEMU
+make freertos_posix_defconfig       # FreeRTOS + POSIX host
+make freertos_cortex_m_defconfig    # FreeRTOS + Cortex-M3 QEMU
+```
+
+For interactive configuration with a menu interface:
+```shell
+make config
 ```
 
 The RTOS kernel is cloned automatically on first build (ThreadX from
 eclipse-threadx/threadx, FreeRTOS from FreeRTOS/FreeRTOS-Kernel).
 
-Build a single test:
+### Common targets
+
 ```shell
-make tm_basic_processing
+make                    # Build all test binaries
+make tm_basic_processing # Build a single test
+make check              # Build with 3 s intervals + 1 cycle, run all tests
+make clean              # Remove binaries and build directory
+make distclean          # Also remove .config, cloned RTOS trees, Kconfiglib
+make help               # Show all available targets and overrides
 ```
 
-Other targets:
-```shell
-make check      # build with 3s intervals + 1 cycle, run all tests
-make clean      # remove binaries and build directory
-make distclean  # also remove cloned RTOS sources
-```
-
-### POSIX Host
+### POSIX host
 
 ThreadX POSIX port uses `pthread_setschedparam`, which requires elevated
 privileges on Linux:
@@ -115,14 +143,16 @@ FreeRTOS POSIX port runs without `sudo`.
 
 ### Cortex-M QEMU
 
-Requires `arm-none-eabi-gcc` and `qemu-system-arm`. Set `CROSS_COMPILE` in advance.
+Requires `arm-none-eabi-gcc` and `qemu-system-arm`. The build system
+auto-sets `CROSS_COMPILE=arm-none-eabi-` and validates the cross-compiler
+exists before building. Override with an explicit path if needed:
 ```shell
-make RTOS=freertos TARGET=cortex-m-qemu CROSS_COMPILE=arm-none-eabi-
+make CROSS_COMPILE=/opt/toolchain/arm-none-eabi/bin/arm-none-eabi-
 ```
 
 Run under QEMU (auto-terminates via semihosting after one report):
 ```shell
-make run TARGET=cortex-m-qemu
+make run
 ```
 
 Or run the QEMU script directly:
@@ -130,9 +160,27 @@ Or run the QEMU script directly:
 scripts/qemu-run.sh tm_basic_processing -semihosting-config enable=on,target=native
 ```
 
-Control reporting cycles with `TM_TEST_CYCLES` (0 = infinite, default):
+### Build options
+
+Kconfig options can be set via `make config` (interactive) or by editing
+`.config` directly:
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `CONFIG_TEST_DURATION` | 30 | Reporting interval in seconds |
+| `CONFIG_TEST_CYCLES` | 0 | Reports before exit (0 = infinite) |
+| `CONFIG_OPTIMIZE_SIZE` | n | Use `-Os` instead of `-O2` |
+| `CONFIG_DEBUG_SYMBOLS` | n | Add `-g` |
+| `CONFIG_SANITIZERS` | n | Enable ASan/UBSan (POSIX host only) |
+
+Command-line overrides still work for test parameters:
 ```shell
-make TARGET=cortex-m-qemu TM_TEST_CYCLES=1
+make TM_TEST_DURATION=5 TM_TEST_CYCLES=1
+```
+
+Verbose build output:
+```shell
+make V=1
 ```
 
 ## Adding a New RTOS Port
@@ -140,7 +188,9 @@ make TARGET=cortex-m-qemu TM_TEST_CYCLES=1
 1. Create `ports/<rtos>/tm_port.c` implementing the 14 functions in `tm_api.h`
 2. Create `ports/<rtos>/main.c` with RTOS-specific startup
 3. For POSIX host: provide configuration headers in `ports/<rtos>/posix-host/`
-4. For Cortex-M QEMU: provide `FreeRTOSConfig.h` (or equivalent) and ISR
-   dispatch in `ports/<rtos>/cortex-m/`; the shared bootstrap in
-   `ports/common/cortex-m/` handles reset, vector table, and linker script
-5. Add an `ifeq ($(RTOS),<rtos>)` block in the Makefile
+4. For Cortex-M QEMU: provide RTOS config and ISR dispatch in
+   `ports/<rtos>/cortex-m/`; the shared bootstrap in `ports/common/cortex-m/`
+   handles reset, vector table, and linker script
+5. Add a `CONFIG_RTOS_<NAME>` choice entry in `configs/Kconfig`
+6. Add an `ifeq ($(CONFIG_RTOS_<NAME>),y)` block in the Makefile
+7. Create `configs/<rtos>_posix_defconfig` and `configs/<rtos>_cortex_m_defconfig`

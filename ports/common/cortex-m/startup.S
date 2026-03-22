@@ -46,17 +46,13 @@ Reset_Handler:
     /* Call SystemInit (weak default is a no-op). */
     bl      SystemInit
 
-    /* Initialize semihosting file handles (stdout/stderr/stdin).
-     * Without this call, printf() has no output under QEMU semihosting.
-     * initialise_monitor_handles() is provided by librdimon
-     * (--specs=rdimon.specs).  Guarded so non-semihosting builds
-     * (e.g. UART retargeting with nosys.specs) skip the call.
+    /* Branch to main with argc=0, argv=NULL.
+     * Bare-metal has no command line; rdimon does not populate
+     * argc/argv from SYS_GET_CMDLINE on arm-none-eabi-gcc 15.x.
+     * Leaving r0/r1 as-is after the .bss loop passes garbage.
      */
-#ifdef TM_SEMIHOSTING
-    bl      initialise_monitor_handles
-#endif
-
-    /* Branch to main.  If main() returns, spin forever. */
+    movs    r0, #0
+    movs    r1, #0
     bl      main
 .Lhang:
     b       .Lhang

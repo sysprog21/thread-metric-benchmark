@@ -119,10 +119,10 @@ void tm_basic_processing_thread_report(void)
     TM_REPORT_LOOP
     {
         /* Sleep to allow the test to run. */
-        tm_thread_sleep(TM_TEST_DURATION);
+        tm_thread_sleep(tm_test_duration);
 
         /* Increment the relative time. */
-        relative_time = relative_time + TM_TEST_DURATION;
+        relative_time = relative_time + tm_test_duration;
 
         /* Print results to the stdio window. */
         tm_printf(

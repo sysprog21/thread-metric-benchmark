@@ -12,10 +12,17 @@
 
 void tm_main(void);
 
-int main(void)
+int main(int argc, char *argv[])
 {
+#ifndef TM_SEMIHOSTING
+    /* Ensure tm_putchar()/putchar() output is visible immediately
+     * when stdout is redirected or piped (e.g. make check, CI logs).
+     */
     setvbuf(stdout, NULL, _IONBF, 0);
-    printf("Thread-Metric: reporting interval = %d s\n", TM_TEST_DURATION);
+#endif
+    tm_report_init();
+    tm_report_init_argv(argc, argv);
+    tm_printf("Thread-Metric: reporting interval = %d s\n", tm_test_duration);
     tx_kernel_enter();
     return 0;
 }

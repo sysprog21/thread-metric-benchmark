@@ -45,10 +45,20 @@ extern "C" {
 #define TM_TEST_CYCLES 0
 #endif
 
+/* Runtime-configurable test parameters.  Initialised from the
+ * compile-time TM_TEST_DURATION / TM_TEST_CYCLES defaults;
+ * tm_report_init() may override them from environment variables
+ * on hosted (non-semihosting) platforms.
+ */
+extern int tm_test_duration;
+extern int tm_test_cycles;
+
 /* Report helpers and tiny printf implemented in src/tm_report.c.
  * tm_putchar() is the only function each porting layer must supply
  * for console output; tm_printf() calls it internally.
  */
+void tm_report_init(void);
+void tm_report_init_argv(int argc, char **argv);
 void tm_report_finish(void);
 void tm_check_fail(const char *msg);
 void tm_putchar(int c);
@@ -64,8 +74,8 @@ void tm_printf(const char *fmt, ...);
     {                                                           \
         int _tm_cycle;                                          \
         for (_tm_cycle = 0;                                     \
-             !TM_TEST_CYCLES || _tm_cycle < TM_TEST_CYCLES;     \
-             _tm_cycle++)
+             !tm_test_cycles || _tm_cycle < tm_test_cycles;      \
+             tm_test_cycles ? _tm_cycle++ : 0)
 
 #define TM_REPORT_FINISH                                        \
     }                                                           \

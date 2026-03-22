@@ -1,0 +1,12 @@
+# Thread-Metric default configuration
+# ThreadX on POSIX host (Linux/macOS)
+
+CONFIG_RTOS_THREADX=y
+CONFIG_TARGET_POSIX_HOST=y
+CONFIG_TEST_DURATION=30
+CONFIG_TEST_CYCLES=0
+# CONFIG_OPTIMIZE_SIZE is not set
+# CONFIG_DEBUG_SYMBOLS is not set
+# CONFIG_SANITIZERS is not set
+
+CONFIG_CONFIGURED=y

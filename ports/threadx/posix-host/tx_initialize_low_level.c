@@ -215,7 +215,8 @@ void _tx_posix_thread_init(void)
     struct sigaction sa;
     sigset_t block_set;
 
-    if (pipe(_tx_posix_thread_timer_pipe) || pipe(_tx_posix_thread_other_pipe)) {
+    if (pipe(_tx_posix_thread_timer_pipe) ||
+        pipe(_tx_posix_thread_other_pipe)) {
         printf("ThreadX POSIX error creating pipes!\n");
         while (1)
             ;

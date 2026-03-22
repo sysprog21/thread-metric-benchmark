@@ -117,6 +117,22 @@ extern void tm_isr_dispatch_init(void);
 
 void tm_initialize(void (*test_initialization_function)(void))
 {
+#if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
+    /* Set PendSV and SysTick to the lowest interrupt priority before
+     * any task creation.  The FreeRTOS ARM_CM3 port normally does this
+     * inside xPortStartScheduler(), but vTaskResume() can pend PendSV
+     * via portYIELD() during initialization when a high-priority task
+     * is resumed.  With the default priority of 0, PendSV fires
+     * immediately (not masked by BASEPRI) and crashes because PSP has
+     * not been initialized yet.
+     */
+    {
+        volatile unsigned long *shpr3 = (volatile unsigned long *) 0xE000ED20UL;
+        *shpr3 |= (configKERNEL_INTERRUPT_PRIORITY << 16) |
+                  (configKERNEL_INTERRUPT_PRIORITY << 24);
+    }
+#endif
+
 #ifdef TM_ISR_VIA_THREAD
     /* ISR simulation thread at highest FreeRTOS priority.
      * Created before the test threads so it exists when
