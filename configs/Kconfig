@@ -59,7 +59,8 @@ config TEST_CYCLES
       Number of reports before exit(0).  0 = infinite
       (original behavior: run until killed).
       Set to 1 for CI / QEMU semihosting so the program
-      terminates cleanly via _exit() -> SYS_EXIT.
+      terminates cleanly via the direct semihosting
+      SYS_EXIT helper.
 
 endmenu
 

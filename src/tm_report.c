@@ -15,8 +15,18 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef TM_SEMIHOSTING
 #include <unistd.h>
+#endif
 #include "tm_api.h"
+
+#ifdef TM_SEMIHOSTING
+/* Defined in ports/common/cortex-m/tm_putchar.c.  Direct SYS_EXIT
+ * semihosting call that bypasses newlib's _exit() and its deep
+ * dependency chain (__sinit, _swiopen, etc.).
+ */
+void tm_semihosting_exit(int code);
+#endif
 
 /* Runtime test parameters -- default to compile-time values. */
 int tm_test_duration = TM_TEST_DURATION;
@@ -179,12 +189,12 @@ done:
 void tm_report_finish(void)
 {
     /* POSIX: exit() flushes stdio and runs atexit handlers (sanitizers
-     * register theirs via atexit).  Semihosting: _exit() goes straight
-     * to SYS_EXIT -- exit() would call fflush() on uninitialized FILE
-     * structs and crash.
+     * register theirs via atexit).  Semihosting: direct SYS_EXIT
+     * bypasses newlib's _exit() which pulls in __sinit and file I/O
+     * that depend on initialise_monitor_handles (-nostartfiles skips it).
      */
 #ifdef TM_SEMIHOSTING
-    _exit(0);
+    tm_semihosting_exit(0);
 #else
     exit(0);
 #endif
@@ -196,7 +206,7 @@ void tm_check_fail(const char *msg)
         tm_putchar(*msg++);
     /* See tm_report_finish() for the POSIX vs semihosting rationale. */
 #ifdef TM_SEMIHOSTING
-    _exit(1);
+    tm_semihosting_exit(1);
 #else
     exit(1);
 #endif

@@ -70,24 +70,23 @@ void tm_printf(const char *fmt, ...);
  *         ... sleep, print, check counters ...
  *     } TM_REPORT_FINISH
  */
-#define TM_REPORT_LOOP                                          \
-    {                                                           \
-        int _tm_cycle;                                          \
-        for (_tm_cycle = 0;                                     \
-             !tm_test_cycles || _tm_cycle < tm_test_cycles;      \
+#define TM_REPORT_LOOP                                                     \
+    {                                                                      \
+        int _tm_cycle;                                                     \
+        for (_tm_cycle = 0; !tm_test_cycles || _tm_cycle < tm_test_cycles; \
              tm_test_cycles ? _tm_cycle++ : 0)
 
-#define TM_REPORT_FINISH                                        \
-    }                                                           \
+#define TM_REPORT_FINISH \
+    }                    \
     tm_report_finish()
 
 /* Init-time check: abort on failure so mis-configured porting layers
  * are caught immediately instead of producing silent hangs.
  */
-#define TM_CHECK(call)                                          \
-    do {                                                        \
-        if ((call) != TM_SUCCESS)                               \
-            tm_check_fail("FATAL: " #call " failed\n");         \
+#define TM_CHECK(call)                                  \
+    do {                                                \
+        if ((call) != TM_SUCCESS)                       \
+            tm_check_fail("FATAL: " #call " failed\n"); \
     } while (0)
 
 

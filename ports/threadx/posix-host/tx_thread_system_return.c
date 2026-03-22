@@ -70,6 +70,6 @@ VOID _tx_thread_system_return(VOID)
         pthread_exit((void *) &exit_code);
     }
 
-    if (!_tx_thread_current_ptr->tx_thread_posix_int_disabled_flag)
+    if (!temp_thread_ptr || !temp_thread_ptr->tx_thread_posix_int_disabled_flag)
         tx_posix_mutex_recursive_unlock(_tx_posix_mutex);
 }

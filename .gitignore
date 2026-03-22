@@ -1,7 +1,9 @@
 externals/
 /threadx/
+/freertos-kernel/
 /build/
 .config
 .config.old
 /tools/kconfig/
 !ports/threadx/
+!ports/freertos/
