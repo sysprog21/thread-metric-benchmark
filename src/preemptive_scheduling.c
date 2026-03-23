@@ -172,7 +172,7 @@ void tm_preemptive_thread_report(void)
     unsigned long relative_time;
     unsigned long last_total;
     unsigned long average;
-
+    unsigned long c0, c1, c2, c3, c4;
 
     /* Initialize the last total. */
     last_total = 0;
@@ -194,26 +194,29 @@ void tm_preemptive_thread_report(void)
             "%lu\n",
             relative_time);
 
+        /* Snapshot counters so the tolerance check uses values consistent with
+         * the total (workers keep incrementing).
+         */
+        c0 = tm_preemptive_thread_0_counter;
+        c1 = tm_preemptive_thread_1_counter;
+        c2 = tm_preemptive_thread_2_counter;
+        c3 = tm_preemptive_thread_3_counter;
+        c4 = tm_preemptive_thread_4_counter;
+
         /* Calculate the total of all the counters. */
-        total = tm_preemptive_thread_0_counter +
-                tm_preemptive_thread_1_counter +
-                tm_preemptive_thread_2_counter +
-                tm_preemptive_thread_3_counter + tm_preemptive_thread_4_counter;
+        total = c0 + c1 + c2 + c3 + c4;
 
         /* Calculate the average of all the counters. */
         average = total / 5;
 
-        /* See if there are any errors. */
-        if ((tm_preemptive_thread_0_counter < (average - 1)) ||
-            (tm_preemptive_thread_0_counter > (average + 1)) ||
-            (tm_preemptive_thread_1_counter < (average - 1)) ||
-            (tm_preemptive_thread_1_counter > (average + 1)) ||
-            (tm_preemptive_thread_2_counter < (average - 1)) ||
-            (tm_preemptive_thread_2_counter > (average + 1)) ||
-            (tm_preemptive_thread_3_counter < (average - 1)) ||
-            (tm_preemptive_thread_3_counter > (average + 1)) ||
-            (tm_preemptive_thread_4_counter < (average - 1)) ||
-            (tm_preemptive_thread_4_counter > (average + 1))) {
+        /* See if there are any errors. Skip when average is 0 to avoid unsigned
+         * wraparound on (average - 1).
+         */
+        if (average > 0 && ((c0 < (average - 1)) || (c0 > (average + 1)) ||
+                            (c1 < (average - 1)) || (c1 > (average + 1)) ||
+                            (c2 < (average - 1)) || (c2 > (average + 1)) ||
+                            (c3 < (average - 1)) || (c3 > (average + 1)) ||
+                            (c4 < (average - 1)) || (c4 > (average + 1)))) {
             tm_printf(
                 "ERROR: Invalid counter value(s). Preemptive counters should "
                 "not be more that 1 different than the average!\n");

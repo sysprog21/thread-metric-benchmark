@@ -151,6 +151,10 @@ int tm_thread_create(int thread_id, int priority, void (*entry_function)(void))
 {
     UINT status;
 
+    if (thread_id < 0 || thread_id >= TM_THREADX_MAX_THREADS || priority < 1 ||
+        priority > 31)
+        return TM_ERROR;
+
     /* Remember the actual thread entry. */
     tm_thread_entry_functions[thread_id] = (void *) entry_function;
 
@@ -177,6 +181,8 @@ int tm_thread_resume(int thread_id)
 {
     UINT status;
 
+    if (thread_id < 0 || thread_id >= TM_THREADX_MAX_THREADS)
+        return TM_ERROR;
 
     /* Attempt to resume the thread. */
     status = tx_thread_resume(&tm_thread_array[thread_id]);
@@ -196,6 +202,8 @@ int tm_thread_suspend(int thread_id)
 {
     UINT status;
 
+    if (thread_id < 0 || thread_id >= TM_THREADX_MAX_THREADS)
+        return TM_ERROR;
 
     /* Attempt to suspend the thread. */
     status = tx_thread_suspend(&tm_thread_array[thread_id]);
@@ -236,6 +244,8 @@ int tm_queue_create(int queue_id)
 {
     UINT status;
 
+    if (queue_id < 0 || queue_id >= TM_THREADX_MAX_QUEUES)
+        return TM_ERROR;
 
     /* Create the specified queue.  Message size is computed from the
      * actual width of unsigned long so LP64 and ILP32 both work.
@@ -262,6 +272,8 @@ int tm_queue_send(int queue_id, unsigned long *message_ptr)
 {
     UINT status;
 
+    if (queue_id < 0 || queue_id >= TM_THREADX_MAX_QUEUES)
+        return TM_ERROR;
 
     /* Send the message to the specified queue. */
     status = tx_queue_send(&tm_queue_array[queue_id], message_ptr, TX_NO_WAIT);
@@ -282,6 +294,8 @@ int tm_queue_receive(int queue_id, unsigned long *message_ptr)
 {
     UINT status;
 
+    if (queue_id < 0 || queue_id >= TM_THREADX_MAX_QUEUES)
+        return TM_ERROR;
 
     /* Receive the message from the specified queue. */
     status =
@@ -302,6 +316,8 @@ int tm_semaphore_create(int semaphore_id)
 {
     UINT status;
 
+    if (semaphore_id < 0 || semaphore_id >= TM_THREADX_MAX_SEMAPHORES)
+        return TM_ERROR;
 
     /* Create semaphore. */
     status = tx_semaphore_create(&tm_semaphore_array[semaphore_id],
@@ -322,6 +338,8 @@ int tm_semaphore_get(int semaphore_id)
 {
     UINT status;
 
+    if (semaphore_id < 0 || semaphore_id >= TM_THREADX_MAX_SEMAPHORES)
+        return TM_ERROR;
 
     /* Get the semaphore. */
     status = tx_semaphore_get(&tm_semaphore_array[semaphore_id], TX_NO_WAIT);
@@ -341,6 +359,8 @@ int tm_semaphore_put(int semaphore_id)
 {
     UINT status;
 
+    if (semaphore_id < 0 || semaphore_id >= TM_THREADX_MAX_SEMAPHORES)
+        return TM_ERROR;
 
     /* Put the semaphore. */
     status = tx_semaphore_put(&tm_semaphore_array[semaphore_id]);
@@ -361,6 +381,8 @@ int tm_memory_pool_create(int pool_id)
 {
     UINT status;
 
+    if (pool_id < 0 || pool_id >= TM_THREADX_MAX_MEMORY_POOLS)
+        return TM_ERROR;
 
     /* Create the memory pool. */
     status = tx_block_pool_create(
@@ -384,6 +406,8 @@ int tm_memory_pool_allocate(int pool_id, unsigned char **memory_ptr)
 {
     UINT status;
 
+    if (pool_id < 0 || pool_id >= TM_THREADX_MAX_MEMORY_POOLS)
+        return TM_ERROR;
 
     /* Allocate a 128-byte block from the specified memory pool. */
     status = tx_block_allocate(&tm_block_pool_array[pool_id],
@@ -405,6 +429,8 @@ int tm_memory_pool_deallocate(int pool_id, unsigned char *memory_ptr)
 {
     UINT status;
 
+    if (pool_id < 0 || pool_id >= TM_THREADX_MAX_MEMORY_POOLS)
+        return TM_ERROR;
 
     /* Release the 128-byte block back to the specified memory pool. */
     status = tx_block_release((void *) memory_ptr);
