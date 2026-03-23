@@ -129,7 +129,7 @@ void tm_interrupt_preemption_thread_report(void)
     unsigned long relative_time;
     unsigned long last_total;
     unsigned long average;
-
+    unsigned long c0, c1, ch;
 
     /* Initialize the last total. */
     last_total = 0;
@@ -151,32 +151,33 @@ void tm_interrupt_preemption_thread_report(void)
             "Relative Time: %lu\n",
             relative_time);
 
+        /* Snapshot counters for consistent total and tolerance check. */
+        c0 = tm_interrupt_preemption_thread_0_counter;
+        c1 = tm_interrupt_preemption_thread_1_counter;
+        ch = tm_interrupt_preemption_handler_counter;
+
         /* Calculate the total of all the counters. */
-        total = tm_interrupt_preemption_thread_0_counter +
-                tm_interrupt_preemption_thread_1_counter +
-                tm_interrupt_preemption_handler_counter;
+        total = c0 + c1 + ch;
 
         /* Calculate the average of all the counters. */
         average = total / 3;
 
-        /* See if there are any errors. */
-        if ((tm_interrupt_preemption_thread_0_counter < (average - 1)) ||
-            (tm_interrupt_preemption_thread_0_counter > (average + 1)) ||
-            (tm_interrupt_preemption_thread_1_counter < (average - 1)) ||
-            (tm_interrupt_preemption_thread_1_counter > (average + 1)) ||
-            (tm_interrupt_preemption_handler_counter < (average - 1)) ||
-            (tm_interrupt_preemption_handler_counter > (average + 1))) {
+        /* See if there are any errors. Skip when average is 0 to avoid unsigned
+         * wraparound on (average - 1).
+         */
+        if (average > 0 && ((c0 < (average - 1)) || (c0 > (average + 1)) ||
+                            (c1 < (average - 1)) || (c1 > (average + 1)) ||
+                            (ch < (average - 1)) || (ch > (average + 1)))) {
             tm_printf(
                 "ERROR: Invalid counter value(s). Interrupt processing test "
                 "has failed!\n");
         }
 
         /* Show the total interrupts for the time period. */
-        tm_printf("Time Period Total:  %lu\n\n",
-                  tm_interrupt_preemption_handler_counter - last_total);
+        tm_printf("Time Period Total:  %lu\n\n", ch - last_total);
 
         /* Save the last total number of interrupts. */
-        last_total = tm_interrupt_preemption_handler_counter;
+        last_total = ch;
     }
 
     TM_REPORT_FINISH;

@@ -130,7 +130,7 @@ void tm_interrupt_thread_report(void)
     unsigned long last_total;
     unsigned long relative_time;
     unsigned long average;
-
+    unsigned long ct, ch;
 
     /* Initialize the last total. */
     last_total = 0;
@@ -152,28 +152,31 @@ void tm_interrupt_thread_report(void)
             "%lu\n",
             relative_time);
 
+        /* Snapshot counters for consistent total and tolerance check. */
+        ct = tm_interrupt_thread_0_counter;
+        ch = tm_interrupt_handler_counter;
+
         /* Calculate the total of all the counters. */
-        total = tm_interrupt_thread_0_counter + tm_interrupt_handler_counter;
+        total = ct + ch;
 
         /* Calculate the average of all the counters. */
         average = total / 2;
 
-        /* See if there are any errors. */
-        if ((tm_interrupt_thread_0_counter < (average - 1)) ||
-            (tm_interrupt_thread_0_counter > (average + 1)) ||
-            (tm_interrupt_handler_counter < (average - 1)) ||
-            (tm_interrupt_handler_counter > (average + 1))) {
+        /* See if there are any errors.  Skip when average is 0 to
+         * avoid unsigned wraparound on (average - 1).
+         */
+        if (average > 0 && ((ct < (average - 1)) || (ct > (average + 1)) ||
+                            (ch < (average - 1)) || (ch > (average + 1)))) {
             tm_printf(
                 "ERROR: Invalid counter value(s). Interrupt processing test "
                 "has failed!\n");
         }
 
         /* Show the total interrupts for the time period. */
-        tm_printf("Time Period Total:  %lu\n\n",
-                  tm_interrupt_handler_counter - last_total);
+        tm_printf("Time Period Total:  %lu\n\n", ch - last_total);
 
         /* Save the last total number of interrupts. */
-        last_total = tm_interrupt_handler_counter;
+        last_total = ch;
     }
 
     TM_REPORT_FINISH;

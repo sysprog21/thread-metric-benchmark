@@ -165,6 +165,10 @@ int tm_thread_create(int thread_id, int priority, void (*entry_function)(void))
     BaseType_t status;
     UBaseType_t freertos_prio;
 
+    if (thread_id < 0 || thread_id >= TM_FREERTOS_MAX_THREADS || priority < 1 ||
+        priority > 31)
+        return TM_ERROR;
+
     /* Invert priority: TM 1 (highest) -> configMAX_PRIORITIES-2,
      * TM 31 (lowest) -> 0.  Reserve configMAX_PRIORITIES-1 for ISR.
      */
@@ -189,6 +193,9 @@ int tm_thread_create(int thread_id, int priority, void (*entry_function)(void))
 
 int tm_thread_resume(int thread_id)
 {
+    if (thread_id < 0 || thread_id >= TM_FREERTOS_MAX_THREADS)
+        return TM_ERROR;
+
 #if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
     /* Cortex-M: detect ISR context for ISR-safe resume. */
     if (xPortIsInsideInterrupt()) {
@@ -204,6 +211,9 @@ int tm_thread_resume(int thread_id)
 
 int tm_thread_suspend(int thread_id)
 {
+    if (thread_id < 0 || thread_id >= TM_FREERTOS_MAX_THREADS)
+        return TM_ERROR;
+
     vTaskSuspend(tm_thread_array[thread_id]);
     return TM_SUCCESS;
 }
@@ -223,6 +233,9 @@ void tm_thread_sleep(int seconds)
 
 int tm_queue_create(int queue_id)
 {
+    if (queue_id < 0 || queue_id >= TM_FREERTOS_MAX_QUEUES)
+        return TM_ERROR;
+
     tm_queue_array[queue_id] =
         xQueueCreate(TM_FREERTOS_QUEUE_DEPTH, TM_FREERTOS_QUEUE_MSG_SIZE);
 
@@ -234,6 +247,9 @@ int tm_queue_create(int queue_id)
 
 int tm_queue_send(int queue_id, unsigned long *message_ptr)
 {
+    if (queue_id < 0 || queue_id >= TM_FREERTOS_MAX_QUEUES)
+        return TM_ERROR;
+
     if (xQueueSendToBack(tm_queue_array[queue_id], (const void *) message_ptr,
                          0) != pdTRUE)
         return TM_ERROR;
@@ -243,6 +259,9 @@ int tm_queue_send(int queue_id, unsigned long *message_ptr)
 
 int tm_queue_receive(int queue_id, unsigned long *message_ptr)
 {
+    if (queue_id < 0 || queue_id >= TM_FREERTOS_MAX_QUEUES)
+        return TM_ERROR;
+
     if (xQueueReceive(tm_queue_array[queue_id], (void *) message_ptr, 0) !=
         pdTRUE)
         return TM_ERROR;
@@ -255,6 +274,9 @@ int tm_queue_receive(int queue_id, unsigned long *message_ptr)
 
 int tm_semaphore_create(int semaphore_id)
 {
+    if (semaphore_id < 0 || semaphore_id >= TM_FREERTOS_MAX_SEMAPHORES)
+        return TM_ERROR;
+
     tm_semaphore_array[semaphore_id] = xSemaphoreCreateBinary();
 
     if (tm_semaphore_array[semaphore_id] == NULL)
@@ -268,6 +290,9 @@ int tm_semaphore_create(int semaphore_id)
 
 int tm_semaphore_get(int semaphore_id)
 {
+    if (semaphore_id < 0 || semaphore_id >= TM_FREERTOS_MAX_SEMAPHORES)
+        return TM_ERROR;
+
     if (xSemaphoreTake(tm_semaphore_array[semaphore_id], 0) != pdTRUE)
         return TM_ERROR;
 
@@ -276,6 +301,9 @@ int tm_semaphore_get(int semaphore_id)
 
 int tm_semaphore_put(int semaphore_id)
 {
+    if (semaphore_id < 0 || semaphore_id >= TM_FREERTOS_MAX_SEMAPHORES)
+        return TM_ERROR;
+
 #if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
     if (xPortIsInsideInterrupt()) {
         BaseType_t yield = pdFALSE;
@@ -298,7 +326,12 @@ int tm_semaphore_put(int semaphore_id)
 int tm_memory_pool_create(int pool_id)
 {
     int i;
-    unsigned char *base = tm_pool_area[pool_id];
+    unsigned char *base;
+
+    if (pool_id < 0 || pool_id >= TM_FREERTOS_MAX_POOLS)
+        return TM_ERROR;
+
+    base = tm_pool_area[pool_id];
 
     /* Build freelist: each block stores a next pointer. */
     tm_pool_free[pool_id] = (void *) base;
@@ -318,7 +351,12 @@ int tm_memory_pool_create(int pool_id)
 
 int tm_memory_pool_allocate(int pool_id, unsigned char **memory_ptr)
 {
-    void *block = tm_pool_free[pool_id];
+    void *block;
+
+    if (pool_id < 0 || pool_id >= TM_FREERTOS_MAX_POOLS)
+        return TM_ERROR;
+
+    block = tm_pool_free[pool_id];
 
     if (block == NULL)
         return TM_ERROR;
@@ -332,6 +370,9 @@ int tm_memory_pool_allocate(int pool_id, unsigned char **memory_ptr)
 
 int tm_memory_pool_deallocate(int pool_id, unsigned char *memory_ptr)
 {
+    if (pool_id < 0 || pool_id >= TM_FREERTOS_MAX_POOLS)
+        return TM_ERROR;
+
     /* Push onto freelist head. */
     *((void **) memory_ptr) = tm_pool_free[pool_id];
     tm_pool_free[pool_id] = (void *) memory_ptr;
