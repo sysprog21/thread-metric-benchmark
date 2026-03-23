@@ -96,15 +96,19 @@ jobs:
         include:
           - os: ubuntu-24.04
             rtos: threadx
+            target: posix
             defconfig: defconfig
           - os: ubuntu-24.04
             rtos: freertos
+            target: posix
             defconfig: freertos_posix_defconfig
           - os: macos-latest
             rtos: threadx
+            target: posix
             defconfig: defconfig
           - os: macos-latest
             rtos: freertos
+            target: posix
             defconfig: freertos_posix_defconfig
     steps:
       - uses: actions/checkout@v6
@@ -115,12 +119,46 @@ jobs:
                 sudo apt-get update -q=2
                 sudo apt-get install -y -q=2 --no-install-recommends python3
             fi
-      - name: Build and test (${{ matrix.rtos }} POSIX)
+      - name: Build (${{ matrix.rtos }} POSIX)
         run: |
             source .ci/common.sh
             make ${{ matrix.defconfig }}
             make $PARALLEL
-            sudo make check
+      - name: Test (${{ matrix.rtos }} POSIX)
+        id: run-tests
+        continue-on-error: true
+        run: |
+            delimiter=$(openssl rand -hex 8)
+            echo "TEST_OUTPUT<<$delimiter" >> $GITHUB_OUTPUT
+            output=$(sudo make check 2>&1) || true
+            echo "$output" >> $GITHUB_OUTPUT
+            echo "$delimiter" >> $GITHUB_OUTPUT
+            echo "$output"
+            if echo "$output" | grep -qE '[^0-9]0 failed$'; then
+                echo "test_status=passed" >> $GITHUB_OUTPUT
+            else
+                echo "test_status=failed" >> $GITHUB_OUTPUT
+            fi
+      - name: Collect results
+        if: always()
+        env:
+          TEST_OUTPUT: ${{ steps.run-tests.outputs.TEST_OUTPUT }}
+        run: |
+            .ci/ci-tools.sh collect-data \
+                "${{ matrix.rtos }}" \
+                "${{ matrix.target }}" \
+                "${{ matrix.os }}" \
+                "$TEST_OUTPUT"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.rtos }}-${{ matrix.target }}-${{ matrix.os }}
+          path: test-results/
+          retention-days: 7
+      - name: Fail if tests failed
+        if: steps.run-tests.outputs.test_status == 'failed'
+        run: exit 1
 
   cortex-m-tests:
     needs: [detect-code-related-file-changes]
@@ -132,22 +170,58 @@ jobs:
       matrix:
         include:
           - rtos: threadx
+            target: cortex-m
             defconfig: threadx_cortex_m_defconfig
           - rtos: freertos
+            target: cortex-m
             defconfig: freertos_cortex_m_defconfig
     steps:
       - uses: actions/checkout@v6
       - name: Install dependencies
         run: .ci/install-deps.sh cortex-m
-      - name: Build and test (${{ matrix.rtos }} Cortex-M QEMU)
+      - name: Build (${{ matrix.rtos }} Cortex-M QEMU)
         run: |
             source .ci/common.sh
             make ${{ matrix.defconfig }}
             make $PARALLEL
-            make check
+      - name: Test (${{ matrix.rtos }} Cortex-M QEMU)
+        id: run-tests
+        continue-on-error: true
+        run: |
+            delimiter=$(openssl rand -hex 8)
+            echo "TEST_OUTPUT<<$delimiter" >> $GITHUB_OUTPUT
+            output=$(make check 2>&1) || true
+            echo "$output" >> $GITHUB_OUTPUT
+            echo "$delimiter" >> $GITHUB_OUTPUT
+            echo "$output"
+            if echo "$output" | grep -qE '[^0-9]0 failed$'; then
+                echo "test_status=passed" >> $GITHUB_OUTPUT
+            else
+                echo "test_status=failed" >> $GITHUB_OUTPUT
+            fi
+      - name: Collect results
+        if: always()
+        env:
+          TEST_OUTPUT: ${{ steps.run-tests.outputs.TEST_OUTPUT }}
+        run: |
+            .ci/ci-tools.sh collect-data \
+                "${{ matrix.rtos }}" \
+                "${{ matrix.target }}" \
+                "ubuntu-24.04" \
+                "$TEST_OUTPUT"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.rtos }}-${{ matrix.target }}-ubuntu-24.04
+          path: test-results/
+          retention-days: 7
+      - name: Fail if tests failed
+        if: steps.run-tests.outputs.test_status == 'failed'
+        run: exit 1
 
   sanitizers:
-    needs: [detect-code-related-file-changes, posix-tests]
+    needs: [detect-code-related-file-changes]
     if: needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
     timeout-minutes: 30
     runs-on: ubuntu-24.04
@@ -167,6 +241,54 @@ jobs:
             sudo apt-get install -y -q=2 --no-install-recommends python3
       - name: Build and test with ASan (${{ matrix.rtos }})
         run: |
+            source .ci/common.sh
             make ${{ matrix.defconfig }}
             echo "CONFIG_SANITIZERS=y" >> .config
+            make $PARALLEL
             sudo make check
+
+  test-report:
+    needs: [detect-code-related-file-changes, posix-tests, cortex-m-tests]
+    if: >-
+      always() &&
+      needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download all test results
+        uses: actions/download-artifact@v7
+        with:
+          pattern: test-results-*
+          path: all-results/
+      - name: Aggregate results
+        run: .ci/ci-tools.sh aggregate all-results/ test-summary.toml
+      - name: Generate report
+        run: |
+            .ci/ci-tools.sh format-summary test-summary.toml >> $GITHUB_STEP_SUMMARY
+            echo "--- TOML Summary ---"
+            cat test-summary.toml
+      - name: Post PR comment
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+            .ci/ci-tools.sh post-comment test-summary.toml \
+                ${{ github.event.pull_request.number }}
+      - name: Upload summary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-summary
+          path: test-summary.toml
+          retention-days: 30
+      - name: Check overall status
+        run: |
+            status=$(awk '/^\[summary\]/{found=1} found && /^status/{print; exit}' test-summary.toml | sed 's/.*"\(.*\)"/\1/')
+            echo "Overall status: $status"
+            [ "$status" = "passed" ]
