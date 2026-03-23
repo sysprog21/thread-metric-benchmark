@@ -1,0 +1,38 @@
+ports/threadx/posix-host/tx_thread_system_return.c
+  4645d8e0ee26a27d 73
+.ci/check-format.sh
+  4645d8e0ee26a27d 39-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "3cba244644158860bd2b2a8d43a8551d57275f4e",
+  "prompts": {
+    "012829bf293385fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d16e9-b120-7603-8cc6-b80feb88618b",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Jim Huang <jserv@ccns.ncku.edu.tw>",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 947,
+      "overriden_lines": 0
+    },
+    "4645d8e0ee26a27d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e2617f7-5c15-4d24-bde2-16be010f0b3d",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Jim Huang <jserv@ccns.ncku.edu.tw>",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 4,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
