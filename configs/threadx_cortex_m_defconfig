@@ -1,7 +1,12 @@
 # ThreadX on Cortex-M3 QEMU (mps2-an385)
+# Default benchmark interval, but self-terminate after one report so
+# QEMU semihosting runs end cleanly.
 
 CONFIG_RTOS_THREADX=y
 CONFIG_TARGET_CORTEX_M_QEMU=y
+CONFIG_TEST_DURATION=30
 CONFIG_TEST_CYCLES=1
+# CONFIG_OPTIMIZE_SIZE is not set
+# CONFIG_DEBUG_SYMBOLS is not set
 
 CONFIG_CONFIGURED=y

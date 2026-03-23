@@ -124,6 +124,9 @@ $(BUILD):
 	$(Q)mkdir -p $@
 
 clean-build:
-	rm -rf $(BUILD)
+	@if [ ! -e $(BUILD) ]; then exit 0; fi; \
+	if rm -rf $(BUILD) 2>/dev/null; then exit 0; fi; \
+	echo "  CLEAN   $(BUILD)/ (needs privilege escalation)"; \
+	sudo rm -rf $(BUILD)
 
 .PHONY: clean-build

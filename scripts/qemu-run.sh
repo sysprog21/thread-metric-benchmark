@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Run a Thread-Metric ELF under QEMU mps2-an385 (Cortex-M3).
 #
 # Usage:
@@ -19,7 +19,7 @@
 #   QEMU          -- path to qemu-system-arm (default: qemu-system-arm)
 #   QEMU_TIMEOUT  -- outer timeout in seconds (default: 120)
 
-set -e
+set -euo pipefail
 
 if [ $# -lt 1 ]; then
     echo "Usage: $0 <elf> [extra-qemu-flags...]" >&2
@@ -45,39 +45,85 @@ for arg in "$@"; do
     esac
 done
 
-# Locate a timeout command.  coreutils' timeout(1) is not shipped with
-# macOS; Homebrew installs it as "gtimeout".
-TIMEOUT_CMD=""
-if command -v timeout >/dev/null 2>&1; then
-    TIMEOUT_CMD="timeout"
-elif command -v gtimeout >/dev/null 2>&1; then
-    TIMEOUT_CMD="gtimeout"
-else
-    echo "Warning: neither timeout nor gtimeout found; running without timeout" >&2
-fi
+# Run QEMU under a shell-managed timeout instead of timeout(1).
+# Some host timeout wrappers mis-handle QEMU semihosting exit and report a
+# false timeout even though the guest reached SYS_EXIT successfully.
+qemu_pid=""
+watchdog_pid=""
+timeout_flag=""
 
-# Run QEMU with an outer timeout as a safety net.
+cleanup()
+{
+    if [ -n "$watchdog_pid" ]; then
+        kill "$watchdog_pid" 2> /dev/null || true
+        wait "$watchdog_pid" 2> /dev/null || true
+        watchdog_pid=""
+    fi
+    if [ -n "$qemu_pid" ]; then
+        kill "$qemu_pid" 2> /dev/null || true
+        sleep 1
+        kill -9 "$qemu_pid" 2> /dev/null || true
+        qemu_pid=""
+    fi
+    [ -z "$timeout_flag" ] || rm -f "$timeout_flag"
+}
+
+# EXIT fires on normal exit.  INT/TERM handlers clear EXIT first to
+# avoid double-invocation, then clean up and exit with the right code.
+trap cleanup EXIT
+trap 'trap - EXIT; cleanup; exit 130' INT
+trap 'trap - EXIT; cleanup; exit 143' TERM
+
+# The watchdog writes a sentinel file to distinguish its kill from an
+# external signal.  Created via mktemp to avoid predictable paths.
+timeout_flag=$(mktemp "${TMPDIR:-/tmp}/tm-qemu-timeout.XXXXXX")
+rm -f "$timeout_flag"
+
 set +e
-if [ -n "$TIMEOUT_CMD" ]; then
-    "$TIMEOUT_CMD" "$QEMU_TIMEOUT" "$QEMU" \
-        -M mps2-an385 -cpu cortex-m3 -nographic \
-        -kernel "$ELF" "$@" 2>&1
-else
-    "$QEMU" \
-        -M mps2-an385 -cpu cortex-m3 -nographic \
-        -kernel "$ELF" "$@" 2>&1
-fi
+"$QEMU" \
+    -M mps2-an385 -cpu cortex-m3 -nographic \
+    -kernel "$ELF" "$@" 2>&1 &
+qemu_pid=$!
+
+# The watchdog subshell redirects its own stdout/stderr to /dev/null
+# so it does not hold the pipe open when this script is invoked inside
+# $().  Without this, $() blocks until the watchdog's sleep finishes
+# even after QEMU has exited.
+(
+    sleep "$QEMU_TIMEOUT"
+    : > "$timeout_flag"
+    kill "$qemu_pid" 2> /dev/null || true
+    sleep 1
+    kill -9 "$qemu_pid" 2> /dev/null || true
+) > /dev/null 2>&1 &
+watchdog_pid=$!
+
+wait "$qemu_pid"
 rc=$?
+qemu_pid=""
+
+# Reap the watchdog immediately so it cannot linger.
+kill "$watchdog_pid" 2> /dev/null || true
+wait "$watchdog_pid" 2> /dev/null || true
+watchdog_pid=""
 set -e
 
-if [ $rc -eq 124 ]; then
-    # timeout(1) / gtimeout returns 124 when the child is killed.
+# Timeout: the watchdog creates the sentinel before killing QEMU.
+# This distinguishes a watchdog kill from an external signal.
+timed_out=0
+if [ -f "$timeout_flag" ]; then
+    timed_out=1
+fi
+rm -f "$timeout_flag"
+timeout_flag=""
+
+if [ $timed_out -eq 1 ]; then
     if [ $semihosting -eq 1 ]; then
         echo "FAIL: QEMU timed out after ${QEMU_TIMEOUT}s (semihosting exit never reached)" >&2
         echo "  QEMU    : $("$QEMU" --version 2>&1 | head -1)" >&2
         echo "  ELF     : $ELF" >&2
         echo "  flags   : $*" >&2
-        echo "  timeout : $TIMEOUT_CMD $QEMU_TIMEOUT" >&2
+        echo "  timeout : internal watchdog ${QEMU_TIMEOUT}s" >&2
         echo "  Hint: verify -semihosting-config is in flags above, TM_TEST_CYCLES=1 in binary," >&2
         echo "        and QEMU supports ARM semihosting (qemu-system-arm >= 4.0)." >&2
         exit 1

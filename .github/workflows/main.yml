@@ -1,0 +1,172 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect-code-related-file-changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      has_code_related_changes: ${{ steps.set_has_code_related_changes.outputs.has_code_related_changes }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v6
+      - name: Test changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v47
+        with:
+          files: |
+              .ci/**
+              .github/**
+              configs/**
+              include/**
+              mk/**
+              ports/**
+              scripts/**
+              src/**
+              .clang-format
+              .editorconfig
+              Makefile
+      - name: Set has_code_related_changes
+        id: set_has_code_related_changes
+        run: |
+            if [[ ${{ steps.changed-files.outputs.any_changed }} == true ]]; then
+                echo "has_code_related_changes=true" >> $GITHUB_OUTPUT
+            else
+                echo "has_code_related_changes=false" >> $GITHUB_OUTPUT
+            fi
+
+  coding-style:
+    needs: [detect-code-related-file-changes]
+    if: needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install formatting tools
+        run: .ci/install-deps.sh format
+      - name: Check newline at end of files
+        run: .ci/check-newline.sh
+      - name: Check code formatting
+        run: .ci/check-format.sh
+
+  static-analysis:
+    needs: [detect-code-related-file-changes]
+    if: needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
+    timeout-minutes: 15
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: .ci/install-deps.sh analysis
+      - name: scan-build (POSIX host)
+        run: |
+            make defconfig
+            make clean
+            scan-build-20 --status-bugs \
+                -o /tmp/scan-build-report \
+                make -j$(nproc)
+      - name: Upload scan-build report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: scan-build-report
+          path: /tmp/scan-build-report
+          retention-days: 7
+          if-no-files-found: ignore
+
+  posix-tests:
+    needs: [detect-code-related-file-changes]
+    if: needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            rtos: threadx
+            defconfig: defconfig
+          - os: ubuntu-24.04
+            rtos: freertos
+            defconfig: freertos_posix_defconfig
+          - os: macos-latest
+            rtos: threadx
+            defconfig: defconfig
+          - os: macos-latest
+            rtos: freertos
+            defconfig: freertos_posix_defconfig
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+            source .ci/common.sh
+            if [ "$OS_TYPE" = "Linux" ]; then
+                sudo apt-get update -q=2
+                sudo apt-get install -y -q=2 --no-install-recommends python3
+            fi
+      - name: Build and test (${{ matrix.rtos }} POSIX)
+        run: |
+            source .ci/common.sh
+            make ${{ matrix.defconfig }}
+            make $PARALLEL
+            sudo make check
+
+  cortex-m-tests:
+    needs: [detect-code-related-file-changes]
+    if: needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rtos: threadx
+            defconfig: threadx_cortex_m_defconfig
+          - rtos: freertos
+            defconfig: freertos_cortex_m_defconfig
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: .ci/install-deps.sh cortex-m
+      - name: Build and test (${{ matrix.rtos }} Cortex-M QEMU)
+        run: |
+            source .ci/common.sh
+            make ${{ matrix.defconfig }}
+            make $PARALLEL
+            make check
+
+  sanitizers:
+    needs: [detect-code-related-file-changes, posix-tests]
+    if: needs.detect-code-related-file-changes.outputs.has_code_related_changes == 'true'
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rtos: threadx
+            defconfig: defconfig
+          - rtos: freertos
+            defconfig: freertos_posix_defconfig
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+            sudo apt-get update -q=2
+            sudo apt-get install -y -q=2 --no-install-recommends python3
+      - name: Build and test with ASan (${{ matrix.rtos }})
+        run: |
+            make ${{ matrix.defconfig }}
+            echo "CONFIG_SANITIZERS=y" >> .config
+            sudo make check

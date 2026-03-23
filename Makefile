@@ -59,7 +59,11 @@ TM_TEST_CYCLES   ?= $(if $(CONFIG_TEST_CYCLES),$(CONFIG_TEST_CYCLES),0)
 
 # check target parameters -- short runs for smoke testing.
 ifeq ($(CONFIG_TARGET_CORTEX_M_QEMU),y)
-  CHECK_TIMEOUT    := 30
+  # Generous timeout: the check target builds with TM_TEST_DURATION=1, so
+  # tests finish in ~2 s.  120 s accommodates worst-case scenarios where
+  # the rebuild silently kept TM_TEST_DURATION=30 (emulated 30 s wall-clock
+  # is ~35 s on real hardware) or where the CI runner is very slow.
+  CHECK_TIMEOUT    := 120
   CHECK_QEMU_FLAGS := $(QEMU_FLAGS)
 else
   CHECK_DURATION   := 3
@@ -195,6 +199,7 @@ endif
 
 $(CLONE_STAMP):
 	@echo "  CLONE   $(CLONE_URL)"
+	@if [ -d $(RTOS_DIR) ] && [ ! -f $@ ]; then rm -rf $(RTOS_DIR); fi
 	$(Q)git clone $(CLONE_URL) $(RTOS_DIR) --depth=1
 	@touch $@
 
@@ -222,16 +227,9 @@ run:
 	QEMU=$(QEMU) scripts/qemu-run.sh $(firstword $(BINS)) $(QEMU_FLAGS)
 endif
 
-check:
-	@$(if $(CONFIG_TARGET_CORTEX_M_QEMU),\
-	    if ! command -v $(QEMU) >/dev/null 2>&1; then \
-	        echo "Error: $(QEMU) not found (needed for Cortex-M check)"; \
-	        exit 1; \
-	    fi;)
-	@$(if $(CONFIG_TARGET_CORTEX_M_QEMU),\
-	    $(MAKE) --quiet all TM_TEST_DURATION=1 TM_TEST_CYCLES=1,\
-	    $(MAKE) --quiet all)
-	@printf "  CHECK   %s + %s\n" "$(RTOS_NAME)" "$(TARGET_NAME)"
+# Test loop shared by both check variants.
+# Each variant sets up its build and prints the banner, then calls this.
+define run-check-loop
 	@TCMD=""; \
 	if command -v timeout >/dev/null 2>&1; then TCMD="timeout"; \
 	elif command -v gtimeout >/dev/null 2>&1; then TCMD="gtimeout"; fi; \
@@ -255,6 +253,31 @@ check:
 	done; \
 	printf "\n%d passed, %d failed\n" "$$passed" "$$failed"; \
 	[ "$$failed" -eq 0 ]
+endef
+
+ifeq ($(CONFIG_TARGET_CORTEX_M_QEMU),y)
+# Cortex-M: bake TM_TEST_DURATION=1 / TM_TEST_CYCLES=1 into binaries so
+# the program self-terminates via semihosting exit.  No sudo needed.
+# Wipe build/ first via clean-build (handles root-owned leftovers from
+# a prior sudo make) to guarantee no stale objects carry old flags.
+check:
+	@if ! command -v $(QEMU) >/dev/null 2>&1; then \
+	    echo "Error: $(QEMU) not found (needed for Cortex-M check)"; \
+	    exit 1; \
+	fi
+	@$(MAKE) --quiet clean-build
+	@$(MAKE) --quiet all TM_TEST_DURATION=1 TM_TEST_CYCLES=1
+	@printf "  CHECK   %s + %s\n" "$(RTOS_NAME)" "$(TARGET_NAME)"
+	$(run-check-loop)
+else
+# POSIX: binaries read TM_TEST_DURATION / TM_TEST_CYCLES from env at runtime,
+# so the default build is reused.  ThreadX POSIX needs sudo for
+# pthread_setschedparam -- run "make && sudo make check".
+check:
+	@$(MAKE) --quiet all
+	@printf "  CHECK   %s + %s\n" "$(RTOS_NAME)" "$(TARGET_NAME)"
+	$(run-check-loop)
+endif
 endif
 
 diagnose:
@@ -330,14 +353,18 @@ diagnose:
 	fi
 
 clean-bins:
-	rm -f $(BINS)
+	rm -f $(BINS) 2>/dev/null || true
 
 clean: clean-bins clean-build
 
 distclean: clean
-	rm -f .config
-	rm -rf threadx freertos-kernel rt-thread || true
-	rm -rf $(KCONFIG_DIR)
+	rm -f .config .config.old
+	@for d in threadx freertos-kernel rt-thread $(KCONFIG_DIR); do \
+	    [ -d "$$d" ] || continue; \
+	    rm -rf "$$d" 2>/dev/null || { \
+	        echo "  CLEAN   $$d/ (needs privilege escalation)"; \
+	        sudo rm -rf "$$d"; }; \
+	done
 
 # Kconfig targets
 
@@ -348,6 +375,7 @@ KCONFIGLIB_REPO := https://github.com/sysprog21/Kconfiglib
 
 $(KCONFIG_DIR)/kconfiglib.py:
 	@echo "  CLONE   Kconfiglib"
+	@if [ -d $(KCONFIG_DIR) ] && [ ! -f $@ ]; then rm -rf $(KCONFIG_DIR); fi
 	$(Q)git clone --depth=1 -q $(KCONFIGLIB_REPO) $(KCONFIG_DIR)
 
 $(KCONFIG_DIR)/menuconfig.py $(KCONFIG_DIR)/defconfig.py \
