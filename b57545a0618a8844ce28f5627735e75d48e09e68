@@ -1,0 +1,23 @@
+scripts/qemu-run.sh
+  012829bf293385fe 55,58-59,63,65,95,97-98,106-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.1.17",
+  "base_commit_sha": "b57545a0618a8844ce28f5627735e75d48e09e68",
+  "prompts": {
+    "012829bf293385fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019d16e9-b120-7603-8cc6-b80feb88618b",
+        "model": "gpt-5.4"
+      },
+      "human_author": "Jim Huang <jserv@ccns.ncku.edu.tw>",
+      "messages": [],
+      "total_additions": 958,
+      "total_deletions": 10,
+      "accepted_lines": 957,
+      "overriden_lines": 0
+    }
+  }
+}
