@@ -88,7 +88,7 @@ void tm_interrupt_thread_0_entry(void)
          * the interrupt handler is called from the appropriate software
          * interrupt or trap.
          */
-        tm_cause_interrupt();
+        tm_cause_interrupt_sync();
 
         /* We won't get back here until the interrupt processing is complete,
          * including the setting of the semaphore from the interrupt

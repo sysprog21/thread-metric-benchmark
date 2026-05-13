@@ -17,6 +17,7 @@
  * from whichever interrupt test is linked overrides the no-op.
  */
 
+#include <stdbool.h>
 #include "tm_api.h"
 
 /* NVIC register addresses (Cortex-M3) */
@@ -30,6 +31,12 @@
 __attribute__((weak)) void tm_interrupt_handler(void) {}
 __attribute__((weak)) void tm_interrupt_preemption_handler(void) {}
 
+/* Benchmark-only interrupt-context marker used by tm_cause_interrupt_sync().
+ * This preserves ISR-safe FreeRTOS API selection for the inline benchmark
+ * path without reintroducing the NVIC round-trip.
+ */
+static volatile bool tm_benchmark_interrupt_active;
+
 /*
  * Override the weak IRQ31_Handler from vector_table.c.
  * Called by hardware when IRQ 31 is pended.
@@ -38,6 +45,11 @@ void IRQ31_Handler(void)
 {
     tm_interrupt_handler();
     tm_interrupt_preemption_handler();
+}
+
+bool tm_benchmark_interrupt_context_active(void)
+{
+    return tm_benchmark_interrupt_active;
 }
 
 /*
@@ -67,4 +79,25 @@ void tm_isr_dispatch_init(void)
 void tm_cause_interrupt(void)
 {
     NVIC_ISPR0 = (1UL << TM_ISR_IRQ);
+}
+
+/* Synchronous variant: skip the NVIC IRQ31 round-trip and run the
+ * handler in-line on the caller's stack. See tm_api.h for the
+ * contract distinction between this and tm_cause_interrupt().
+ *
+ * Disable interrupts around the flag+handler so a SysTick that lands
+ * mid-handler cannot pend PendSV, preempt to a higher-priority task,
+ * and have that task observe tm_benchmark_interrupt_active==1 in
+ * thread-mode -- which would route its next Thread-Metric API call
+ * down the FromISR path and corrupt the FreeRTOS state. The handler
+ * is short (counter increment + tm_semaphore_put) so the masked
+ * region is bounded.
+ */
+void tm_cause_interrupt_sync(void)
+{
+    __asm volatile("cpsid i" ::: "memory");
+    tm_benchmark_interrupt_active = true;
+    tm_interrupt_handler();
+    tm_benchmark_interrupt_active = false;
+    __asm volatile("cpsie i" ::: "memory");
 }

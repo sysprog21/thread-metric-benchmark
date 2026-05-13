@@ -34,9 +34,12 @@
 
 /* Include necessary files. */
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include "tm_api.h"
 #include "tx_api.h"
+#include "tx_thread.h"
 
 
 /* Define ThreadX mapping constants. */
@@ -74,6 +77,83 @@
 /* Define the number of timer interrupt ticks per second. */
 
 #define TM_THREADX_TICKS_PER_SECOND 100
+
+#if defined(TM_ISR_VIA_THREAD) || defined(__arm__)
+extern bool tm_benchmark_interrupt_context_active(void);
+void tm_threadx_benchmark_sync_complete(void);
+
+#ifndef TM_ISR_VIA_THREAD
+static volatile bool tm_threadx_benchmark_preemption_pending;
+#endif
+
+/* Save-and-restore PRIMASK rather than unconditional cpsid/cpsie:
+ * tm_cause_interrupt_sync() already masks interrupts around the inline
+ * handler call, and this helper is called from inside that handler. An
+ * unconditional cpsie in the exit path would clobber the outer mask
+ * before the outer code clears tm_benchmark_interrupt_active, opening
+ * a window where SysTick/PendSV could context-switch to a higher-
+ * priority task that observes the flag still set in thread mode and
+ * wrongly takes the synthetic-ISR wrapper.
+ */
+static uint32_t tm_threadx_benchmark_isr_enter(void)
+{
+#ifndef TM_ISR_VIA_THREAD
+    /* Cortex-M: emulate ISR-entry preamble so any handler-driven
+     * tx_thread_resume / tx_semaphore_put defers the resulting
+     * context switch until cpsie i, mirroring real ISR semantics.
+     * POSIX needs no emulation -- ThreadX POSIX APIs are mutex-
+     * guarded and safe to call from thread context, and faking
+     * system_state without the kernel mutex races with the timer
+     * thread's _tx_timer_interrupt path.
+     */
+    uint32_t primask;
+    __asm volatile("mrs %0, primask" : "=r"(primask));
+    __asm volatile("cpsid i" ::: "memory");
+    _tx_thread_system_state++;
+    _tx_thread_preempt_disable++;
+    return primask;
+#else
+    return 0;
+#endif
+}
+
+static void tm_threadx_benchmark_isr_exit(uint32_t primask)
+{
+#ifndef TM_ISR_VIA_THREAD
+    TX_THREAD *current_thread;
+
+    _tx_thread_preempt_disable--;
+    _tx_thread_system_state--;
+
+    TX_THREAD_GET_CURRENT(current_thread);
+    if ((current_thread != _tx_thread_execute_ptr) &&
+        (_tx_thread_preempt_disable == 0)) {
+        tm_threadx_benchmark_preemption_pending = true;
+    }
+
+    __asm volatile("msr primask, %0" : : "r"(primask) : "memory");
+#else
+    (void) primask;
+#endif
+}
+
+void tm_threadx_benchmark_sync_complete(void)
+{
+#ifndef TM_ISR_VIA_THREAD
+    TX_THREAD *current_thread;
+
+    if (!tm_threadx_benchmark_preemption_pending)
+        return;
+
+    tm_threadx_benchmark_preemption_pending = false;
+    TX_THREAD_GET_CURRENT(current_thread);
+    if ((current_thread != _tx_thread_execute_ptr) &&
+        (_tx_thread_preempt_disable == 0) && (_tx_thread_system_state == 0)) {
+        _tx_thread_system_return();
+    }
+#endif
+}
+#endif
 
 
 /* Define ThreadX data structures. */
@@ -184,8 +264,17 @@ int tm_thread_resume(int thread_id)
     if (thread_id < 0 || thread_id >= TM_THREADX_MAX_THREADS)
         return TM_ERROR;
 
+#if defined(TM_ISR_VIA_THREAD) || defined(__arm__)
+    if (tm_benchmark_interrupt_context_active()) {
+        uint32_t primask = tm_threadx_benchmark_isr_enter();
+        status = tx_thread_resume(&tm_thread_array[thread_id]);
+        tm_threadx_benchmark_isr_exit(primask);
+    } else
+#endif
     /* Attempt to resume the thread. */
-    status = tx_thread_resume(&tm_thread_array[thread_id]);
+    {
+        status = tx_thread_resume(&tm_thread_array[thread_id]);
+    }
 
     /* Determine if the thread resume was successful. */
     if (status == TX_SUCCESS)
@@ -362,8 +451,17 @@ int tm_semaphore_put(int semaphore_id)
     if (semaphore_id < 0 || semaphore_id >= TM_THREADX_MAX_SEMAPHORES)
         return TM_ERROR;
 
+#if defined(TM_ISR_VIA_THREAD) || defined(__arm__)
+    if (tm_benchmark_interrupt_context_active()) {
+        uint32_t primask = tm_threadx_benchmark_isr_enter();
+        status = tx_semaphore_put(&tm_semaphore_array[semaphore_id]);
+        tm_threadx_benchmark_isr_exit(primask);
+    } else
+#endif
     /* Put the semaphore. */
-    status = tx_semaphore_put(&tm_semaphore_array[semaphore_id]);
+    {
+        status = tx_semaphore_put(&tm_semaphore_array[semaphore_id]);
+    }
 
     /* Determine if the semaphore put was successful. */
     if (status == TX_SUCCESS)
@@ -476,6 +574,8 @@ VOID tm_thread_entry(ULONG thread_input)
 __attribute__((weak)) void tm_interrupt_handler(void) {}
 __attribute__((weak)) void tm_interrupt_preemption_handler(void) {}
 
+static volatile bool tm_benchmark_interrupt_active;
+
 static VOID tm_isr_thread_entry(ULONG input)
 {
     (void) input;
@@ -490,6 +590,22 @@ static VOID tm_isr_thread_entry(ULONG input)
 void tm_cause_interrupt(void)
 {
     tx_semaphore_put(&tm_isr_semaphore);
+}
+
+bool tm_benchmark_interrupt_context_active(void)
+{
+    return tm_benchmark_interrupt_active;
+}
+
+/* Synchronous variant: skip the ISR-thread round-trip and run the
+ * handler in-line on the caller's stack while the port wrappers bracket
+ * each RTOS service with synthetic ISR context.
+ */
+void tm_cause_interrupt_sync(void)
+{
+    tm_benchmark_interrupt_active = true;
+    tm_interrupt_handler();
+    tm_benchmark_interrupt_active = false;
 }
 
 #endif /* TM_ISR_VIA_THREAD */

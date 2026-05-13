@@ -31,7 +31,8 @@ mk/
   build.mk               # Toolchain, flags, build directory, verbosity
 
 include/
-  tm_api.h               # RTOS-neutral API (14 functions + tm_cause_interrupt)
+  tm_api.h               # RTOS-neutral API: 14 functions + tm_cause_interrupt +
+                         #   tm_cause_interrupt_sync (see Porting Layer below)
 
 src/
   *.c                    # One test per file, each defines tm_main()
@@ -43,12 +44,12 @@ ports/
       vector_table.c     #   Default NVIC handlers (weak aliases)
       mps2_an385.ld      #   Linker script (4 MB FLASH + 4 MB SRAM)
   threadx/               # ThreadX porting layer
-    tm_port.c            #   14-function API implementation
+    tm_port.c            #   Porting layer (14 functions + cause-interrupt pair)
     main.c               #   Entry point
     posix-host/          #   POSIX simulator config (Linux/macOS)
     cortex-m/            #   Cortex-M3 QEMU support (SVC dispatch, SysTick)
   freertos/              # FreeRTOS porting layer
-    tm_port.c            #   14-function API implementation
+    tm_port.c            #   Porting layer (14 functions + cause-interrupt pair)
     main.c               #   Entry point
     posix-host/          #   POSIX simulator config (FreeRTOSConfig.h)
     cortex-m/            #   Cortex-M3 QEMU support (NVIC IRQ dispatch)
@@ -72,12 +73,24 @@ Both ports have been tested with all 8 tests on both targets (`make check`).
 
 ## Porting Layer
 
-Implement the 14 functions declared in `tm_api.h` plus `tm_cause_interrupt()`.
+Implement the 14 functions declared in `tm_api.h` plus the two
+interrupt-cause primitives:
+
+- `tm_cause_interrupt()` — must traverse the RTOS's real interrupt path
+  (SVC, NVIC pend, semaphore-to-ISR-thread, etc.) so the handler runs
+  with full context save/restore and any handler-triggered higher-
+  priority resume causes preemption. Used by
+  `interrupt_preemption_processing.c`.
+- `tm_cause_interrupt_sync()` — must invoke `tm_interrupt_handler()`
+  in-line on the caller's stack, with no trap and no scheduler round-
+  trip. Used by `interrupt_processing.c` to measure the cost of an ISR
+  body without the preemption-path overhead.
+
 See `ports/threadx/tm_port.c` or `ports/freertos/tm_port.c` for references.
 
 Requirements for fair benchmarking:
 - Functions must be real calls, not macros
-- `tm_thread_sleep` needs a 10 ms periodic tick source
+- `tm_thread_sleep` takes seconds; each port maps that to its native tick rate
 - Queue messages are `4 * sizeof(unsigned long)` bytes (16 on ILP32, 32 on LP64)
 - Memory pool blocks are 128 bytes
 - No cache locking of test or RTOS code regions
@@ -185,7 +198,9 @@ make V=1
 
 ## Adding a New RTOS Port
 
-1. Create `ports/<rtos>/tm_port.c` implementing the 14 functions in `tm_api.h`
+1. Create `ports/<rtos>/tm_port.c` implementing the 14 functions in
+   `tm_api.h` plus the two cause-interrupt primitives
+   (`tm_cause_interrupt`, `tm_cause_interrupt_sync`)
 2. Create `ports/<rtos>/main.c` with RTOS-specific startup
 3. For POSIX host: provide configuration headers in `ports/<rtos>/posix-host/`
 4. For Cortex-M QEMU: provide RTOS config and ISR dispatch in
