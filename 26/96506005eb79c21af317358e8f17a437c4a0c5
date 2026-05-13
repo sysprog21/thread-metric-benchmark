@@ -1,0 +1,63 @@
+ports/threadx/tm_port.c
+  s_285a527ddd25e7::t_0e5761437704e7 100-108,122
+  s_f58092dc0d9def::t_ebde5d0f96c557 38
+  s_285a527ddd25e7::t_1bf0d3aeec094c 577
+  s_285a527ddd25e7::t_9fad545fd3cea9 595
+  s_285a527ddd25e7::t_a9f10b15a1c265 42,81,99,111-113,117-119,121,123-133,154-157,267-268,270,272-273,275-277,454-455,457,459-460,462-464,596-597,601-602
+  s_f58092dc0d9def::t_fefeee402f8283 600,603-605,607,609-610
+  s_285a527ddd25e7::t_695013720553c2 606,608
+  s_285a527ddd25e7::t_fb157f12eec3ea 37
+  s_f58092dc0d9def::t_310604f989dc4f 456,458
+  s_f58092dc0d9def::t_a0ec37f67f012c 269,271
+  s_285a527ddd25e7::t_0e67db7b3615db 82
+  s_f58092dc0d9def::t_3199eabc32ea10 89-98,109-110,114-116,120,134-136
+ports/freertos/tm_port.c
+  s_285a527ddd25e7::t_561735e72ea517 26
+  s_285a527ddd25e7::t_ee14561203c34b 122
+  s_f58092dc0d9def::t_13f17ade451869 106-114
+ports/freertos/cortex-m/tm_isr_dispatch.c
+  s_f58092dc0d9def::t_26d985bbdbe71e 83-86,95-97,100,103
+  s_285a527ddd25e7::t_6c9d8bfdfc5bc8 50
+  s_285a527ddd25e7::t_61c8a567b39b22 20
+  s_f58092dc0d9def::t_ec7f1be4255a4e 87-94,98,102
+  s_285a527ddd25e7::t_c3103d8f50dcc0 99,101
+  s_285a527ddd25e7::t_a7e113a1bbd4fc 38
+README.md
+  s_f58092dc0d9def::t_2509579885dbd4 201-203
+  s_f58092dc0d9def::t_a0c032dc55823d 76-88
+  s_f58092dc0d9def::t_5171f7f5dff54c 47,52
+  s_f58092dc0d9def::t_fc570ca04d61a2 34-35
+include/tm_api.h
+  s_285a527ddd25e7::t_9990e3f69aac68 138-149
+  s_f58092dc0d9def::t_61afdaaac74f47 114-125,128-137,150
+ports/threadx/cortex-m/tm_isr_dispatch.c
+  s_285a527ddd25e7::t_2509e9cd1e5bbc 24,30-32
+  s_f58092dc0d9def::t_998c0d9af33a17 49-50,53-55,58,62
+  s_285a527ddd25e7::t_823ef6ee308956 57,59
+  s_285a527ddd25e7::t_117aed0965dc6c 45
+  s_285a527ddd25e7::t_a9f10b15a1c265 33,44,46-47,51-52,56,60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "2696506005eb79c21af317358e8f17a437c4a0c5",
+  "prompts": {},
+  "sessions": {
+    "s_285a527ddd25e7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0bc5d7dc-66ea-4b0d-bb96-2bf7a2b3fc4b",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jim Huang <jserv@ccns.ncku.edu.tw>"
+    },
+    "s_f58092dc0d9def": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d98d60aa-b315-44ad-968f-01b6f583108d",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "Jim Huang <jserv@ccns.ncku.edu.tw>"
+    }
+  }
+}
