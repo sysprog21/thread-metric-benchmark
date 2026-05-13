@@ -23,6 +23,7 @@
 #include <FreeRTOS.h>
 #include <queue.h>
 #include <semphr.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <task.h>
 #include "tm_api.h"
@@ -102,6 +103,15 @@ void tm_cause_interrupt(void)
     xSemaphoreGive(tm_isr_sem);
 }
 
+/* Synchronous variant: skip the ISR-task round-trip and run the
+ * handler in-line on the caller's stack. See tm_api.h for the
+ * contract distinction between this and tm_cause_interrupt().
+ */
+void tm_cause_interrupt_sync(void)
+{
+    tm_interrupt_handler();
+}
+
 #endif /* TM_ISR_VIA_THREAD */
 
 
@@ -109,6 +119,7 @@ void tm_cause_interrupt(void)
 
 #if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
 extern void tm_isr_dispatch_init(void);
+extern bool tm_benchmark_interrupt_context_active(void);
 /* tm_cause_interrupt() defined in tm_isr_dispatch.c */
 #endif
 
@@ -198,7 +209,7 @@ int tm_thread_resume(int thread_id)
 
 #if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
     /* Cortex-M: detect ISR context for ISR-safe resume. */
-    if (xPortIsInsideInterrupt()) {
+    if (xPortIsInsideInterrupt() || tm_benchmark_interrupt_context_active()) {
         BaseType_t yield = pdFALSE;
         yield = xTaskResumeFromISR(tm_thread_array[thread_id]);
         portYIELD_FROM_ISR(yield);
@@ -305,7 +316,7 @@ int tm_semaphore_put(int semaphore_id)
         return TM_ERROR;
 
 #if defined(__arm__) && !defined(TM_ISR_VIA_THREAD)
-    if (xPortIsInsideInterrupt()) {
+    if (xPortIsInsideInterrupt() || tm_benchmark_interrupt_context_active()) {
         BaseType_t yield = pdFALSE;
         if (xSemaphoreGiveFromISR(tm_semaphore_array[semaphore_id], &yield) !=
             pdTRUE)

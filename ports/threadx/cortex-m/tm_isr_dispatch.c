@@ -21,10 +21,15 @@
  * from whichever interrupt test is linked overrides the no-op.
  */
 
+#include <stdbool.h>
 #include "tm_api.h"
 
 __attribute__((weak)) void tm_interrupt_handler(void) {}
 __attribute__((weak)) void tm_interrupt_preemption_handler(void) {}
+
+extern void tm_threadx_benchmark_sync_complete(void);
+
+static volatile bool tm_benchmark_interrupt_active;
 
 void SVC_Handler(void)
 {
@@ -35,4 +40,23 @@ void SVC_Handler(void)
 void tm_cause_interrupt(void)
 {
     __asm volatile("svc #0");
+}
+
+bool tm_benchmark_interrupt_context_active(void)
+{
+    return tm_benchmark_interrupt_active;
+}
+
+/* Synchronous variant: skip the SVC trap and run the handler in-line on
+ * the caller's stack while letting the port wrappers bracket each RTOS
+ * service with synthetic ISR context.
+ */
+void tm_cause_interrupt_sync(void)
+{
+    __asm volatile("cpsid i" ::: "memory");
+    tm_benchmark_interrupt_active = true;
+    tm_interrupt_handler();
+    tm_benchmark_interrupt_active = false;
+    __asm volatile("cpsie i" ::: "memory");
+    tm_threadx_benchmark_sync_complete();
 }

@@ -110,7 +110,43 @@ int tm_semaphore_put(int semaphore_id);
 int tm_memory_pool_create(int pool_id);
 int tm_memory_pool_allocate(int pool_id, unsigned char **memory_ptr);
 int tm_memory_pool_deallocate(int pool_id, unsigned char *memory_ptr);
+
+/* Trigger an asynchronous "interrupt" event.
+ *
+ * Implementations must route execution through the same trap/IRQ mechanism the
+ * RTOS uses for real hardware interrupts so that:
+ *   - The interrupted thread's context is saved and restored.
+ *   - A handler-triggered higher-priority resume causes preemption.
+ *   - tm_cause_interrupt() does not return until the handler has run.
+ *
+ * Used by interrupt_preemption_processing.c, which relies on the
+ * preemption side-effect of the handler resuming a higher-priority
+ * thread.
+ */
 void tm_cause_interrupt(void);
+
+/* Synchronous variant: invoke the interrupt handler in-line and return to the
+ * caller without going through a trap or scheduler round-trip.
+ *
+ * The interrupt_processing.c test uses this to measure the cost of the ISR body
+ * plus a semaphore handshake without paying the trap entry/exit cost the
+ * preemption test specifically measures. Ports typically implement this as a
+ * direct call to tm_interrupt_handler(); they MUST NOT post a semaphore to a
+ * dedicated ISR thread or pend a software IRQ, because those add a scheduler
+ * round-trip that tm_cause_interrupt() already exercises.
+ *
+ * If the port's tm_* APIs called by the handler dispatch on ISR vs. thread
+ * context (e.g. FreeRTOS xSemaphoreGiveFromISR), the port is responsible for
+ * ensuring those calls execute safely in thread mode. The FreeRTOS Cortex-M
+ * port masks IRQs (PRIMASK) around the inline call so no real interrupt or
+ * context switch can race with the benchmark-only ISR-context flag. See
+ * ports/freertos/cortex-m/tm_isr_dispatch.c for the reference pattern.
+ *
+ * Ports with no safe inline path may alias this to tm_cause_interrupt();
+ * interrupt_processing then measures the same path as
+ * interrupt_preemption_processing, which is still valid (just coarser).
+ */
+void tm_cause_interrupt_sync(void);
 
 
 /* Determine if a C++ compiler is being used.  If so, complete the standard
